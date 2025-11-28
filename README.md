@@ -1,41 +1,38 @@
-# Workly
+# Nome cognome
+Mattia Corna
 
-Workly è un software aziendale per la gestione digitale delle buste paga: consente di elaborare, archiviare e consultare le retribuzioni in modo digitale, sicuro e accessibile da qualsiasi dispositivo.
+# Titolo
+BPIC (Buste paghe in cloud)
 
-## Descrizione
-Workly automatizza il ciclo di vita delle buste paga: dalla generazione e verifica, all'archiviazione sicura fino alla consultazione e al download da parte dei dipendenti o dei responsabili autorizzati.
+# Tagline
+La tua busta paga, sempre online, semplice e sicura
 
-## Caratteristiche principali
-- Elaborazione paghe: calcolo automatico delle voci retributive, contributive e fiscali.
-- Archiviazione sicura: conservazione crittografata e tracciata delle buste paga.
-- Accesso multi-dispositivo: interfaccia web responsive per desktop, tablet e mobile.
-- Gestione ruoli e permessi: controllo degli accessi per amministratori, HR e dipendenti.
-- Ricerca e filtri: individuazione rapida delle buste paga per periodo, dipendente o reparto.
-- Esportazione e reportistica: esportazione in PDF/CSV e report aggregati.
+# Descrizione
+BPiC (Busta Paga Online) è un software aziendale che consente di elaborare, archiviare e consultare le buste paga in modo digitale, sicuro e accessibile da qualsiasi dispositivo
 
-## Vantaggi
-- Riduce i tempi di gestione amministrativa.
-- Migliora la sicurezza e la conformità normativa.
-- Facilita la consultazione autonoma da parte dei dipendenti.
-- Centralizza i dati per analisi e report HR.
+# Descrizione completa
+-come utente devo registrarmi per usufruire del sito
+-come utente posso decidere di farer un abbonamento mensile dal costo di 3.99€
+-come utente aggiungo le ore mensili lavorate al fine della generazione della busta paga
+-come utente aggiungo la paga oraria al fine della generazione della busta paga
+-come utente aggiungo il livello lavoratore (es A, A super, B B super...) al fine della generazione della busta paga
+-come utente aggiungo le eventuali ore di ferie usufruite al fine della generazione della busta paga
+-come utente aggiungo le eventuali ore di malattia usufruite al fine della generazione della busta paga
+-come utente aggiungo le eventuali ore di straordinaree usufruite al fine della generazione della busta paga
+-come utente posso richiedere di generare la busta paga completa (tasse, stipendio lordo, stipendio netto...)
+-come utente abbonato posso richiedere la stampa pdf della busta paga
+-come utente abbonato posso il pdf della busta paga per email
+-come utente abbonato posso visualizzare tutte le mie precedenti buste paghe
+-come utente abbonato posso selezionare due tra le mie buste paghe e confrontare tra loro lo stipendio lordo e netto e le tasse pagate, le ferie, le malattie ecc...
 
-## Requisiti
-- Browser moderno (Chrome, Firefox, Edge, Safari).
-- Backend e database configurati secondo la documentazione di deploy (vedi sezione Installazione).
+# Target
+Qualsiasi persona che vuole visualizzare la sua busta paga in modo semplice e sicuro e vuole salvarsele tutte
 
-## Installazione (breve)
-1. Clonare il repository.
-2. Configurare variabili d'ambiente (database, storage, chiavi di crittografia).
-3. Eseguire le migrazioni del database e avviare i servizi (backend e frontend).
-Per dettagli tecnici, aggiungere qui i comandi specifici del progetto.
+# Competitors
+software di jethr, paghe open. software di passepartour, Software DoEmploy
 
-## Uso
-- Accesso tramite interfaccia web con autenticazione.
-- Dashboard per amministratori e area personale per i dipendenti.
-- Funzionalità di upload, revisione e pubblicazione delle buste paga.
+# Tecnologie
+html, css, php, js, sql
 
-## Sicurezza e privacy
-Workly applica crittografia per i dati sensibili, logging sicuro e controlli di accesso basati sui ruoli. Si raccomanda di seguire le policy aziendali e le normative locali in materia di privacy e conservazione dei documenti.
-
-## Contatti
-Per supporto o informazioni: corna.mattia.studente@itispaleocapa.it
+# Link Web App
+http://cornamattia5ie.altervista.org/
