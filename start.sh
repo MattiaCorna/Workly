@@ -5,7 +5,7 @@ set -e
 
 # CONFIGURA QUI IL TUO UTENTE E PASSWORD
 PMA_USER="utente_phpmyadmin"
-PMA_PASS="mattiacorna07"
+PMA_PASS="password_sicura"
 BLOWFISH_SECRET="qwertyuiopasdfghjklzxcvbnmqwerty"
 
 echo "🛠️  Aggiornamento pacchetti e installazione Apache, PHP, MariaDB..."
