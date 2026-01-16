@@ -5,7 +5,7 @@ set -e
 
 # CONFIGURA QUI IL TUO UTENTE E PASSWORD
 PMA_USER="utente_phpmyadmin"
-PMA_PASS="mattiacorna07"
+PMA_PASS="password_sicura"
 BLOWFISH_SECRET="qwertyuiopasdfghjklzxcvbnmqwerty"
 
 echo "🛠️  Aggiornamento pacchetti e installazione Apache, PHP, MariaDB..."
@@ -25,15 +25,15 @@ EOF
 
 echo "📂 Installazione phpMyAdmin..."
 cd /var/www/html
-#sudo wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.zip
-#sudo unzip phpMyAdmin-latest-all-languages.zip
-#sudo mv phpMyAdmin-*-all-languages phpmyadmin
-#sudo rm phpMyAdmin-latest-all-languages.zip
+sudo wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.zip
+sudo unzip phpMyAdmin-latest-all-languages.zip
+sudo mv phpMyAdmin-*-all-languages phpmyadmin
+sudo rm phpMyAdmin-latest-all-languages.zip
 
 echo "⚙️  Configurazione phpMyAdmin..."
 cd phpmyadmin
-#sudo cp config.sample.inc.php config.inc.php
-#sudo sed -i "s/\(\$cfg\['blowfish_secret'\] = \).*/\1'$BLOWFISH_SECRET';/" config.inc.php
+sudo cp config.sample.inc.php config.inc.php
+sudo sed -i "s/\(\$cfg\['blowfish_secret'\] = \).*/\1'$BLOWFISH_SECRET';/" config.inc.php
 
 echo "🌐 Configurazione Apache per phpMyAdmin..."
 cat <<EOCONF | sudo tee /etc/apache2/conf-available/phpmyadmin.conf
@@ -62,8 +62,10 @@ EOF
 echo ""
 echo "✅ Installazione completata!"
 echo "🔗 Accedi a phpMyAdmin all'indirizzo:"
-echo "    http://localhost/phpmyadmin&quot;"
+echo "    http://localhost/phpmyadmin"
 echo ""
 echo "👤 Credenziali di accesso:"
 echo "    Utente: $PMA_USER"
 echo "    Password: $PMA_PASS"
+
+
