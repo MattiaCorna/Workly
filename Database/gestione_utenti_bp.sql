@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Creato il: Gen 23, 2026 alle 08:42
+-- Creato il: Gen 26, 2026 alle 15:31
 -- Versione del server: 10.11.13-MariaDB-0ubuntu0.24.04.1
 -- Versione PHP: 8.3.6
 
@@ -20,79 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `gestione_utenti_bp`
 --
-
-DELIMITER $$
---
--- Procedure
---
-CREATE DEFINER=`utente_phpmyadmin`@`localhost` PROCEDURE `Aggiungi_Privilegio_A_Ruolo` (IN `p_ID_ruolo` INT, IN `p_ID_privilegio` INT)   BEGIN
-    INSERT INTO Ruolo_Privilegio (ID_ruolo, ID_privilegio)
-    VALUES (p_ID_ruolo, p_ID_privilegio)
-    ON DUPLICATE KEY UPDATE Data_assegnazione = CURRENT_TIMESTAMP;
-END$$
-
-CREATE DEFINER=`utente_phpmyadmin`@`localhost` PROCEDURE `Assegna_Ruolo` (IN `p_ID_utente` INT, IN `p_ID_ruolo` INT, IN `p_Assegnato_da` INT)   BEGIN
-    INSERT INTO Utente_Ruolo (ID_utente, ID_ruolo, Assegnato_da)
-    VALUES (p_ID_utente, p_ID_ruolo, p_Assegnato_da)
-    ON DUPLICATE KEY UPDATE 
-        Data_assegnazione = CURRENT_TIMESTAMP,
-        Assegnato_da = p_Assegnato_da;
-END$$
-
-CREATE DEFINER=`utente_phpmyadmin`@`localhost` PROCEDURE `Ottieni_Definizione_Ruolo` (IN `p_ID_ruolo` INT)   BEGIN
-    SELECT 
-        r.Nome_ruolo,
-        r.Descrizione AS Descrizione_ruolo,
-        p.Nome_privilegio,
-        p.Risorsa,
-        p.Azione,
-        p.Descrizione AS Descrizione_privilegio
-    FROM Ruoli r
-    JOIN Ruolo_Privilegio rp ON r.ID_ruolo = rp.ID_ruolo
-    JOIN Privilegi p ON rp.ID_privilegio = p.ID_privilegio
-    WHERE r.ID_ruolo = p_ID_ruolo
-    ORDER BY p.Risorsa, p.Azione;
-END$$
-
-CREATE DEFINER=`utente_phpmyadmin`@`localhost` PROCEDURE `Ottieni_Privilegi_Utente` (IN `p_ID_utente` INT)   BEGIN
-    SELECT DISTINCT
-        p.Nome_privilegio,
-        p.Risorsa,
-        p.Azione,
-        p.Descrizione,
-        r.Nome_ruolo
-    FROM Utente_Ruolo ur
-    JOIN Ruolo_Privilegio rp ON ur.ID_ruolo = rp.ID_ruolo
-    JOIN Privilegi p ON rp.ID_privilegio = p.ID_privilegio
-    JOIN Ruoli r ON ur.ID_ruolo = r.ID_ruolo
-    WHERE ur.ID_utente = p_ID_utente
-    AND r.Attivo = TRUE
-    ORDER BY p.Risorsa, p.Azione;
-END$$
-
-CREATE DEFINER=`utente_phpmyadmin`@`localhost` PROCEDURE `Rimuovi_Privilegio_Da_Ruolo` (IN `p_ID_ruolo` INT, IN `p_ID_privilegio` INT)   BEGIN
-    DELETE FROM Ruolo_Privilegio
-    WHERE ID_ruolo = p_ID_ruolo AND ID_privilegio = p_ID_privilegio;
-END$$
-
-CREATE DEFINER=`utente_phpmyadmin`@`localhost` PROCEDURE `Rimuovi_Ruolo` (IN `p_ID_utente` INT, IN `p_ID_ruolo` INT)   BEGIN
-    DELETE FROM Utente_Ruolo
-    WHERE ID_utente = p_ID_utente AND ID_ruolo = p_ID_ruolo;
-END$$
-
-CREATE DEFINER=`utente_phpmyadmin`@`localhost` PROCEDURE `Verifica_Privilegio_Utente` (IN `p_ID_utente` INT, IN `p_Risorsa` VARCHAR(100), IN `p_Azione` VARCHAR(20), OUT `p_Ha_Privilegio` BOOLEAN)   BEGIN
-    SELECT COUNT(*) > 0 INTO p_Ha_Privilegio
-    FROM Utente_Ruolo ur
-    JOIN Ruolo_Privilegio rp ON ur.ID_ruolo = rp.ID_ruolo
-    JOIN Privilegi p ON rp.ID_privilegio = p.ID_privilegio
-    JOIN Ruoli r ON ur.ID_ruolo = r.ID_ruolo
-    WHERE ur.ID_utente = p_ID_utente 
-    AND p.Risorsa = p_Risorsa
-    AND (p.Azione = p_Azione OR p.Azione = 'ALL')
-    AND r.Attivo = TRUE;
-END$$
-
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -215,7 +142,8 @@ CREATE TABLE `Utenti` (
   `Email` varchar(100) DEFAULT NULL,
   `Tipo_utente` enum('abbonato','non_abbonato') DEFAULT NULL,
   `ID_profilo` int(11) NOT NULL,
-  `ID_busta` int(11) DEFAULT NULL
+  `ID_busta` int(11) DEFAULT NULL,
+  `Password_hash` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Utenti del sistema (gerarchia collassata)';
 
 -- --------------------------------------------------------
