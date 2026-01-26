@@ -83,25 +83,25 @@
 </head>
 <body>
 
-<a href="index.php" class="home-btn" title="Home">🏠</a>
+<a href="../SITO" class="home-btn" title="Home">🏠</a>
 
 <div class="container">
   <h1>📊 Esercizi - GPO</h1>
   
   <div class="esercizi-list">
-    <a href="diagramma_classi.php" class="esercizio-card">
+    <a href="Diagrammi/diagramma_classi.php" class="esercizio-card">
       <h3>Diagramma delle Classi</h3>
       <p>Visualizzazione del diagramma UML delle classi</p>
     </a>
-    <a href="diagramma_casi_uso.php" class="esercizio-card">
+    <a href="Diagrammi/diagramma_casi_uso.php" class="esercizio-card">
       <h3>Diagramma dei Casi d'Uso</h3>
       <p>Visualizzazione del diagramma UML dei casi d'uso</p>
     </a>
-    <a href="diagramma_er.php" class="esercizio-card">
+    <a href="Diagrammi/diagramma_er.php" class="esercizio-card">
       <h3>Diagramma ER</h3>
       <p>Visualizzazione del diagramma Entity-Relationship</p>
     </a>
-    <a href="diagramma_gantt.php" class="esercizio-card">
+    <a href="Diagrammi/diagramma_gantt.php" class="esercizio-card">
       <h3>Diagramma di Gantt</h3>
       <p>Pianificazione temporale delle attività del progetto</p>
     </a>

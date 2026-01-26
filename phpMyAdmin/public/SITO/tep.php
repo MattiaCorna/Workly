@@ -83,7 +83,7 @@
 </head>
 <body>
 
-<a href="../index.php" class="home-btn" title="Home">🏠</a>
+<a href="../SITO" class="home-btn" title="Home">🏠</a>
 
 <div class="container">
   <h1>📚 Esercizi - TEP</h1>

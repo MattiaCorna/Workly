@@ -51,14 +51,14 @@
 </head>
 <body>
 
-<a href="gpo.php" class="home-btn" title="Indietro">⬅️</a>
+<a href="../gpo.php" class="home-btn" title="Indietro">⬅️</a>
 
 <div class="container">
   <h1>📋 Diagramma delle Classi</h1>
   <p class="description">Diagramma UML che mostra la struttura e le relazioni tra le classi del progetto</p>
   
   <div class="diagram-container">
-    <img src="Diagrammi/DiagrammaClassi.png" alt="Diagramma delle Classi">
+    <img src="DiagrammaClassi.png" alt="Diagramma delle Classi">
   </div>
 </div>
 

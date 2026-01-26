@@ -51,14 +51,14 @@
 </head>
 <body>
 
-<a href="gpo.php" class="home-btn" title="Indietro">⬅️</a>
+<a href="../gpo.php" class="home-btn" title="Indietro">⬅️</a>
 
 <div class="container">
   <h1>📋 Diagramma E/R</h1>
   <p class="description">Diagramma Entity-Relationship che mostra le entità e le loro relazioni</p>
   
   <div class="diagram-container">
-    <img src="Diagrammi/DiagrammaER.png" alt="Diagramma E/R">
+    <img src="DiagrammaER.png" alt="Diagramma E/R">
   </div>
 </div>
 

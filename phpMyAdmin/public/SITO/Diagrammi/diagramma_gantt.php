@@ -193,7 +193,7 @@ $timelineWidth = $totalDays * $dayWidth;
 </head>
 <body>
 
-<a href="gpo.php" class="home-btn" title="Indietro">⬅️</a>
+<a href="../gpo.php" class="home-btn" title="Indietro">⬅️</a>
 
 <h1>📅 Diagramma di Gantt - Progetto Sequenziale</h1>
 

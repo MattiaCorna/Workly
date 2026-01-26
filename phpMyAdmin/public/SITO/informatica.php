@@ -83,7 +83,7 @@
 </head>
 <body>
 
-<a href="../index.php" class="home-btn" title="Home">🏠</a>
+<a href="../SITO" class="home-btn" title="Home">🏠</a>
 
 <div class="container">
   <h1>💻 Esercizi - INFORMATICA</h1>
@@ -93,9 +93,9 @@
       <h3>Esercizio 1</h3>
       <p>Creazione e gestione articoli</p>
     </a>
-    <a href="login.php" class="esercizio-card">
-      <h3>Esercizio 2</h3>
-      <p>Sistema di login e autenticazione</p>
+    <a href="registrazione.php" class="esercizio-card">
+      <h3>BCIP</h3>
+      <p>Registrazione e Login</p>
     </a>
   </div>
 </div>

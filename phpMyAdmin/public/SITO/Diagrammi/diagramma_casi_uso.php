@@ -81,14 +81,14 @@
 </head>
 <body>
 
-<a href="gpo.php" class="home-btn" title="Indietro">⬅️</a>
+<a href="../gpo.php" class="home-btn" title="Indietro">⬅️</a>
 
 <div class="container">
   <h1>🎭 Diagramma dei Casi d'Uso</h1>
   <p class="description">Diagramma UML che mostra i casi d'uso e gli attori del sistema</p>
   
   <div class="diagram-container">
-    <img src="Diagrammi/DiagrammaCasiDuso.png" alt="Diagramma delle Classi">
+    <img src="DiagrammaCasiDuso.png" alt="Diagramma dei Casi d'Uso">
   </div>
 </div>
 
