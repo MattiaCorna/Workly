@@ -34,64 +34,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             } else {
                 $passwordHash = password_hash($password, PASSWORD_BCRYPT);
 
-                // Transaction (così profilo + utente vengono creati insieme)
-                $mysqli->begin_transaction();
+                // Inserisco utente
+                $idBusta = null;
 
-                try {
-                    // 1) Creo profilo minimo (necessario per ID_profilo NOT NULL)
-                    $livello = "base";
-                    $mese = 1; // valore valido (check 1..12)
-                    $nullMaggiorazioni = null;
-
-                    $stmt = $mysqli->prepare("
-                        INSERT INTO Profilo_contratto (Maggiorazioni, Livello_dipendente, Mese_lavorativo)
-                        VALUES (?, ?, ?)
-                    ");
-                    if (!$stmt) {
-                        throw new Exception("Errore prepare profilo.");
-                    }
-
-                    // bind_param non accetta direttamente NULL con tipi stretti: uso variabile
-                    $stmt->bind_param("dsi", $nullMaggiorazioni, $livello, $mese);
-                    // Nota: con "d" e NULL MySQLi può warning; alternativa:
-                    // se ti dà problemi, cambia Maggiorazioni a 0.0 oppure usa bind_param("ssi") e cast.
-                    $stmt->execute();
-                    $stmt->close();
-
-                    $idProfilo = $mysqli->insert_id;
-
-                    // 2) Inserisco utente
-                    $tipo = "non_abbonato";
-                    $idBusta = null;
-
-                    $stmt = $mysqli->prepare("
-                        INSERT INTO Utenti (N_Telefono, Email, Tipo_utente, ID_profilo, ID_busta, Password_hash)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ");
-                    if (!$stmt) {
-                        throw new Exception("Errore prepare utente.");
-                    }
-
-                    // per i NULL in MySQLi: uso variabili e poi setto a NULL/valore
+                $stmt = $mysqli->prepare("
+                    INSERT INTO Utenti (N_Telefono, Email, ID_busta, Password_hash)
+                    VALUES (?, ?, ?, ?)
+                ");
+                if (!$stmt) {
+                    $errors[] = "Errore interno (prepare).";
+                } else {
                     $telefonoParam = ($telefono !== "") ? $telefono : null;
 
                     $stmt->bind_param(
-                        "sssiss",
+                        "ssis",
                         $telefonoParam,
                         $email,
-                        $tipo,
-                        $idProfilo,
-                        $idBusta,       // NULL ok
+                        $idBusta,
                         $passwordHash
                     );
-                    $stmt->execute();
+                    if ($stmt->execute()) {
+                        // Assegna ruolo non abbonato al nuovo utente
+                        $stmt2 = $mysqli->prepare("INSERT INTO Utente_Ruolo (email_utente, ID_ruolo) VALUES (?, 3)");
+                        if ($stmt2) {
+                            $stmt2->bind_param("s", $email);
+                            $stmt2->execute();
+                            $stmt2->close();
+                        }
+                        $ok = true;
+                    } else {
+                        $errors[] = "Errore durante la registrazione.";
+                    }
                     $stmt->close();
-
-                    $mysqli->commit();
-                    $ok = true;
-                } catch (Throwable $e) {
-                    $mysqli->rollback();
-                    $errors[] = "Errore durante la registrazione.";
                 }
             }
         }

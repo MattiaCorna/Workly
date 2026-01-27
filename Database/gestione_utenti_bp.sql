@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Creato il: Gen 26, 2026 alle 15:31
+-- Creato il: Gen 27, 2026 alle 17:55
 -- Versione del server: 10.11.13-MariaDB-0ubuntu0.24.04.1
 -- Versione PHP: 8.3.6
 
@@ -46,25 +46,6 @@ CREATE TABLE `Confronta` (
   `Data_confronto` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Confronti tra buste paga (solo utenti abbonati)';
 
---
--- Trigger `Confronta`
---
-DELIMITER $$
-CREATE TRIGGER `check_confronta_abbonato` BEFORE INSERT ON `Confronta` FOR EACH ROW BEGIN
-    DECLARE v_tipo VARCHAR(20);
-    
-    SELECT Tipo_utente INTO v_tipo
-    FROM Utenti
-    WHERE ID_utente = NEW.ID_utente;
-    
-    IF v_tipo != 'abbonato' THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Solo gli utenti abbonati possono confrontare buste paga';
-    END IF;
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -79,6 +60,22 @@ CREATE TABLE `Privilegi` (
   `Azione` enum('SELECT','INSERT','UPDATE','DELETE','ALL') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Privilegi atomici del sistema';
 
+--
+-- Dump dei dati per la tabella `Privilegi`
+--
+
+INSERT INTO `Privilegi` (`ID_privilegio`, `Nome_privilegio`, `Descrizione`, `Risorsa`, `Azione`) VALUES
+(1, 'Inserimento contratto', 'Permette di inserire nuovi contratti', 'contratti', 'INSERT'),
+(2, 'Inserimento ore', 'Permette di inserire ore lavorate', 'ore', 'INSERT'),
+(3, 'Generazione busta paga senza PDF', 'Permette di generare buste paga senza scaricare PDF', 'buste_paga', 'INSERT'),
+(4, 'Download PDF', 'Permette di scaricare PDF delle buste paga', 'pdf', 'SELECT'),
+(5, 'Invio PDF via email', 'Permette di inviare PDF via email', 'email', 'INSERT'),
+(6, 'Archivio buste paga', 'Accesso all archivio delle buste paga', 'archivio', 'SELECT'),
+(7, 'Confronto tra buste paga', 'Permette di confrontare buste paga', 'confronto', 'SELECT'),
+(8, 'Gestione utenti', 'Gestione degli utenti del sistema', 'utenti', 'ALL'),
+(9, 'Gestione ruoli', 'Gestione dei ruoli', 'ruoli', 'ALL'),
+(10, 'Gestione privilegi', 'Gestione dei privilegi', 'privilegi', 'ALL');
+
 -- --------------------------------------------------------
 
 --
@@ -91,6 +88,14 @@ CREATE TABLE `Profilo_contratto` (
   `Livello_dipendente` varchar(50) NOT NULL,
   `Mese_lavorativo` int(11) DEFAULT NULL CHECK (`Mese_lavorativo` between 1 and 12)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Profili contrattuali dei dipendenti';
+
+--
+-- Dump dei dati per la tabella `Profilo_contratto`
+--
+
+INSERT INTO `Profilo_contratto` (`ID_profilo`, `Maggiorazioni`, `Livello_dipendente`, `Mese_lavorativo`) VALUES
+(1, 0.00, 'Base', 1),
+(2, NULL, 'base', 1);
 
 -- --------------------------------------------------------
 
@@ -105,6 +110,15 @@ CREATE TABLE `Ruoli` (
   `Attivo` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Ruoli come insiemi di privilegi';
 
+--
+-- Dump dei dati per la tabella `Ruoli`
+--
+
+INSERT INTO `Ruoli` (`ID_ruolo`, `Nome_ruolo`, `Descrizione`, `Attivo`) VALUES
+(1, 'admin', 'Amministratore del sistema con pieni privilegi', 1),
+(2, 'utente_abbonato', 'Utente con abbonamento attivo', 1),
+(3, 'utente_non_abbonato', 'Utente senza abbonamento', 1);
+
 -- --------------------------------------------------------
 
 --
@@ -117,6 +131,32 @@ CREATE TABLE `Ruolo_Privilegio` (
   `Data_assegnazione` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Definisce i ruoli come insiemi di privilegi';
 
+--
+-- Dump dei dati per la tabella `Ruolo_Privilegio`
+--
+
+INSERT INTO `Ruolo_Privilegio` (`ID_ruolo`, `ID_privilegio`, `Data_assegnazione`) VALUES
+(1, 1, '2026-01-27 17:33:21'),
+(1, 2, '2026-01-27 17:33:21'),
+(1, 3, '2026-01-27 17:33:21'),
+(1, 4, '2026-01-27 17:33:21'),
+(1, 5, '2026-01-27 17:33:21'),
+(1, 6, '2026-01-27 17:33:21'),
+(1, 7, '2026-01-27 17:33:21'),
+(1, 8, '2026-01-27 17:33:21'),
+(1, 9, '2026-01-27 17:33:21'),
+(1, 10, '2026-01-27 17:33:21'),
+(2, 1, '2026-01-27 17:34:50'),
+(2, 2, '2026-01-27 17:34:50'),
+(2, 3, '2026-01-27 17:34:50'),
+(2, 4, '2026-01-27 17:34:50'),
+(2, 5, '2026-01-27 17:34:50'),
+(2, 6, '2026-01-27 17:34:50'),
+(2, 7, '2026-01-27 17:34:50'),
+(3, 1, '2026-01-27 17:34:50'),
+(3, 2, '2026-01-27 17:34:50'),
+(3, 3, '2026-01-27 17:34:50');
+
 -- --------------------------------------------------------
 
 --
@@ -124,11 +164,18 @@ CREATE TABLE `Ruolo_Privilegio` (
 --
 
 CREATE TABLE `Utente_Ruolo` (
-  `ID_utente` int(11) NOT NULL,
   `ID_ruolo` int(11) NOT NULL,
-  `Data_assegnazione` timestamp NULL DEFAULT current_timestamp(),
-  `Assegnato_da` int(11) DEFAULT NULL
+  `email_utente` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Assegna ruoli agli utenti';
+
+--
+-- Dump dei dati per la tabella `Utente_Ruolo`
+--
+
+INSERT INTO `Utente_Ruolo` (`ID_ruolo`, `email_utente`) VALUES
+(3, 'aaaa@gmail.com'),
+(1, 'corna.mattia.studente@itispaleocapa.it'),
+(1, 'mattia.corna2007@gmail.com');
 
 -- --------------------------------------------------------
 
@@ -140,11 +187,18 @@ CREATE TABLE `Utenti` (
   `ID_utente` int(11) NOT NULL,
   `N_Telefono` varchar(20) DEFAULT NULL,
   `Email` varchar(100) DEFAULT NULL,
-  `Tipo_utente` enum('abbonato','non_abbonato') DEFAULT NULL,
-  `ID_profilo` int(11) NOT NULL,
   `ID_busta` int(11) DEFAULT NULL,
   `Password_hash` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Utenti del sistema (gerarchia collassata)';
+
+--
+-- Dump dei dati per la tabella `Utenti`
+--
+
+INSERT INTO `Utenti` (`ID_utente`, `N_Telefono`, `Email`, `ID_busta`, `Password_hash`) VALUES
+(2, '3922566605', 'mattia.corna2007@gmail.com', NULL, '$2y$10$C9yMB.fzzuiUGIez6kWiCOHW6TBksDhVm9wUrw1/WsHPn.D9PQY.G'),
+(3, '3922566605', 'corna.mattia.studente@itispaleocapa.it', NULL, '$2y$10$W2q5l/EC786G.nhB1DdRU.WDSNAvEdSEO7MrfGuSTx6nSeIRCU4JK'),
+(4, '124', 'aaaa@gmail.com', NULL, '$2y$10$0pRGhTkD3250WUU1IJx36ebwSDEXpDEpl5xpA35g7RbP6GvmKdsmO');
 
 -- --------------------------------------------------------
 
@@ -172,51 +226,6 @@ CREATE TABLE `Vista_Definizione_Ruoli` (
 -- (Vedi sotto per la vista effettiva)
 --
 CREATE TABLE `Vista_Dettaglio_Utente` (
-`ID_utente` int(11)
-,`Email` varchar(100)
-,`N_Telefono` varchar(20)
-,`Tipo_utente` enum('abbonato','non_abbonato')
-,`ID_profilo` int(11)
-,`Livello_dipendente` varchar(50)
-,`Maggiorazioni` decimal(10,2)
-,`Mese_lavorativo` int(11)
-,`ID_busta` int(11)
-,`Stipendio_lordo` decimal(10,2)
-,`Stipendio_netto` decimal(10,2)
-,`Tasse_totali` decimal(10,2)
-);
-
--- --------------------------------------------------------
-
---
--- Struttura stand-in per le viste `Vista_Privilegi_Utente`
--- (Vedi sotto per la vista effettiva)
---
-CREATE TABLE `Vista_Privilegi_Utente` (
-`ID_utente` int(11)
-,`Email` varchar(100)
-,`Tipo_utente` enum('abbonato','non_abbonato')
-,`Nome_ruolo` varchar(50)
-,`Nome_privilegio` varchar(100)
-,`Risorsa` varchar(100)
-,`Azione` enum('SELECT','INSERT','UPDATE','DELETE','ALL')
-);
-
--- --------------------------------------------------------
-
---
--- Struttura stand-in per le viste `Vista_Utenti_Ruoli`
--- (Vedi sotto per la vista effettiva)
---
-CREATE TABLE `Vista_Utenti_Ruoli` (
-`ID_utente` int(11)
-,`Email` varchar(100)
-,`N_Telefono` varchar(20)
-,`Tipo_utente` enum('abbonato','non_abbonato')
-,`Nome_ruolo` varchar(50)
-,`Descrizione_ruolo` text
-,`Data_assegnazione` timestamp
-,`Assegnato_da_email` varchar(100)
 );
 
 --
@@ -271,9 +280,7 @@ ALTER TABLE `Ruolo_Privilegio`
 -- Indici per le tabelle `Utente_Ruolo`
 --
 ALTER TABLE `Utente_Ruolo`
-  ADD PRIMARY KEY (`ID_utente`,`ID_ruolo`),
-  ADD KEY `Assegnato_da` (`Assegnato_da`),
-  ADD KEY `idx_utente` (`ID_utente`),
+  ADD PRIMARY KEY (`email_utente`,`ID_ruolo`),
   ADD KEY `idx_ruolo` (`ID_ruolo`);
 
 --
@@ -282,9 +289,7 @@ ALTER TABLE `Utente_Ruolo`
 ALTER TABLE `Utenti`
   ADD PRIMARY KEY (`ID_utente`),
   ADD UNIQUE KEY `Email` (`Email`),
-  ADD KEY `ID_profilo` (`ID_profilo`),
   ADD KEY `ID_busta` (`ID_busta`),
-  ADD KEY `idx_tipo_utente` (`Tipo_utente`),
   ADD KEY `idx_email` (`Email`);
 
 --
@@ -301,25 +306,25 @@ ALTER TABLE `Busta_paga`
 -- AUTO_INCREMENT per la tabella `Privilegi`
 --
 ALTER TABLE `Privilegi`
-  MODIFY `ID_privilegio` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ID_privilegio` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT per la tabella `Profilo_contratto`
 --
 ALTER TABLE `Profilo_contratto`
-  MODIFY `ID_profilo` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ID_profilo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT per la tabella `Ruoli`
 --
 ALTER TABLE `Ruoli`
-  MODIFY `ID_ruolo` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ID_ruolo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT per la tabella `Utenti`
 --
 ALTER TABLE `Utenti`
-  MODIFY `ID_utente` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ID_utente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 -- --------------------------------------------------------
 
@@ -338,24 +343,6 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`utente_phpmyadmin`@`localhost` SQL SECURITY 
 DROP TABLE IF EXISTS `Vista_Dettaglio_Utente`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`utente_phpmyadmin`@`localhost` SQL SECURITY DEFINER VIEW `Vista_Dettaglio_Utente`  AS SELECT `u`.`ID_utente` AS `ID_utente`, `u`.`Email` AS `Email`, `u`.`N_Telefono` AS `N_Telefono`, `u`.`Tipo_utente` AS `Tipo_utente`, `pc`.`ID_profilo` AS `ID_profilo`, `pc`.`Livello_dipendente` AS `Livello_dipendente`, `pc`.`Maggiorazioni` AS `Maggiorazioni`, `pc`.`Mese_lavorativo` AS `Mese_lavorativo`, `bp`.`ID_busta` AS `ID_busta`, `bp`.`Stipendio_lordo` AS `Stipendio_lordo`, `bp`.`Stipendio_netto` AS `Stipendio_netto`, `bp`.`Tasse_totali` AS `Tasse_totali` FROM ((`Utenti` `u` join `Profilo_contratto` `pc` on(`u`.`ID_profilo` = `pc`.`ID_profilo`)) left join `Busta_paga` `bp` on(`u`.`ID_busta` = `bp`.`ID_busta`)) ;
-
--- --------------------------------------------------------
-
---
--- Struttura per vista `Vista_Privilegi_Utente`
---
-DROP TABLE IF EXISTS `Vista_Privilegi_Utente`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`utente_phpmyadmin`@`localhost` SQL SECURITY DEFINER VIEW `Vista_Privilegi_Utente`  AS SELECT DISTINCT `u`.`ID_utente` AS `ID_utente`, `u`.`Email` AS `Email`, `u`.`Tipo_utente` AS `Tipo_utente`, `r`.`Nome_ruolo` AS `Nome_ruolo`, `p`.`Nome_privilegio` AS `Nome_privilegio`, `p`.`Risorsa` AS `Risorsa`, `p`.`Azione` AS `Azione` FROM ((((`Utenti` `u` join `Utente_Ruolo` `ur` on(`u`.`ID_utente` = `ur`.`ID_utente`)) join `Ruoli` `r` on(`ur`.`ID_ruolo` = `r`.`ID_ruolo`)) join `Ruolo_Privilegio` `rp` on(`r`.`ID_ruolo` = `rp`.`ID_ruolo`)) join `Privilegi` `p` on(`rp`.`ID_privilegio` = `p`.`ID_privilegio`)) WHERE `r`.`Attivo` = 1 ORDER BY `u`.`ID_utente` ASC, `p`.`Risorsa` ASC, `p`.`Azione` ASC ;
-
--- --------------------------------------------------------
-
---
--- Struttura per vista `Vista_Utenti_Ruoli`
---
-DROP TABLE IF EXISTS `Vista_Utenti_Ruoli`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`utente_phpmyadmin`@`localhost` SQL SECURITY DEFINER VIEW `Vista_Utenti_Ruoli`  AS SELECT `u`.`ID_utente` AS `ID_utente`, `u`.`Email` AS `Email`, `u`.`N_Telefono` AS `N_Telefono`, `u`.`Tipo_utente` AS `Tipo_utente`, `r`.`Nome_ruolo` AS `Nome_ruolo`, `r`.`Descrizione` AS `Descrizione_ruolo`, `ur`.`Data_assegnazione` AS `Data_assegnazione`, `ua`.`Email` AS `Assegnato_da_email` FROM (((`Utenti` `u` left join `Utente_Ruolo` `ur` on(`u`.`ID_utente` = `ur`.`ID_utente`)) left join `Ruoli` `r` on(`ur`.`ID_ruolo` = `r`.`ID_ruolo`)) left join `Utenti` `ua` on(`ur`.`Assegnato_da` = `ua`.`ID_utente`)) ORDER BY `u`.`ID_utente` ASC, `r`.`Nome_ruolo` ASC ;
 
 --
 -- Limiti per le tabelle scaricate
@@ -376,18 +363,9 @@ ALTER TABLE `Ruolo_Privilegio`
   ADD CONSTRAINT `Ruolo_Privilegio_ibfk_2` FOREIGN KEY (`ID_privilegio`) REFERENCES `Privilegi` (`ID_privilegio`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Limiti per la tabella `Utente_Ruolo`
---
-ALTER TABLE `Utente_Ruolo`
-  ADD CONSTRAINT `Utente_Ruolo_ibfk_1` FOREIGN KEY (`ID_utente`) REFERENCES `Utenti` (`ID_utente`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `Utente_Ruolo_ibfk_2` FOREIGN KEY (`ID_ruolo`) REFERENCES `Ruoli` (`ID_ruolo`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `Utente_Ruolo_ibfk_3` FOREIGN KEY (`Assegnato_da`) REFERENCES `Utenti` (`ID_utente`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
 -- Limiti per la tabella `Utenti`
 --
 ALTER TABLE `Utenti`
-  ADD CONSTRAINT `Utenti_ibfk_1` FOREIGN KEY (`ID_profilo`) REFERENCES `Profilo_contratto` (`ID_profilo`) ON UPDATE CASCADE,
   ADD CONSTRAINT `Utenti_ibfk_2` FOREIGN KEY (`ID_busta`) REFERENCES `Busta_paga` (`ID_busta`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
