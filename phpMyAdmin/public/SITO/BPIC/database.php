@@ -1,7 +1,7 @@
 <?php
 // Parametri di configurazione
 $host = '127.0.0.1';
-$db = 'Workly';
+$db = 'gestione_utenti_bp';
 $user = 'utente_phpmyadmin';
 $pass = 'password_sicura';
 $charset = 'utf8mb4';

@@ -50,39 +50,124 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <title>Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{font-family:system-ui,Arial;margin:40px;max-width:520px}
-    label{display:block;margin-top:12px}
-    input{width:100%;padding:10px;margin-top:6px}
-    button{margin-top:16px;padding:10px 14px;cursor:pointer}
-    .err{background:#ffecec;border:1px solid #f5a5a5;padding:10px;border-radius:8px;margin:12px 0}
-    a{display:inline-block;margin-top:14px}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f4f6f8;
+    }
+    .home-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 50px;
+      height: 50px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.3s, background 0.3s;
+    }
+    .home-btn:hover {
+      background: #764ba2;
+      transform: scale(1.1);
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      color: #333;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      transition: transform 0.3s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+    }
+    .err {
+      background: #ffecec;
+      border: 1px solid #f5a5a5;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+    a {
+      display: inline-block;
+      margin-top: 15px;
+      color: #667eea;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
 
-<h1>Login</h1>
+<a href="../index.php" class="home-btn" title="Home">🏠</a>
 
-<?php if ($errors): ?>
-  <div class="err">
-    <ul>
-      <?php foreach ($errors as $e): ?>
-        <li><?= htmlspecialchars($e, ENT_QUOTES, "UTF-8") ?></li>
-      <?php endforeach; ?>
-    </ul>
-  </div>
-<?php endif; ?>
+<div class="container">
+  <h1>Login</h1>
 
-<form method="post" autocomplete="on">
-  <label>Email</label>
-  <input type="email" name="email" required value="<?= htmlspecialchars($_POST["email"] ?? "", ENT_QUOTES, "UTF-8") ?>">
+  <?php if ($errors): ?>
+    <div class="err">
+      <ul>
+        <?php foreach ($errors as $e): ?>
+          <li><?= htmlspecialchars($e, ENT_QUOTES, "UTF-8") ?></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  <?php endif; ?>
 
-  <label>Password</label>
-  <input type="password" name="password" required>
+  <form method="post" autocomplete="on">
+    <label>Email</label>
+    <input type="email" name="email" required value="<?= htmlspecialchars($_POST["email"] ?? "", ENT_QUOTES, "UTF-8") ?>">
 
-  <button type="submit">Entra</button>
-</form>
+    <label>Password</label>
+    <input type="password" name="password" required>
 
-<a href="registrazione.php">Crea un account</a>
+    <button type="submit">Entra</button>
+  </form>
+
+  <a href="register.php">Crea un account</a>
+</div>
 
 </body>
 </html>
