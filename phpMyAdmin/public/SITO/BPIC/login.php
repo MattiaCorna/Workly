@@ -5,6 +5,7 @@ require_once __DIR__ . "/database.php";
 session_start();
 
 $errors = [];
+$generatedToken = '';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST["email"] ?? "");
@@ -14,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $errors[] = "Email non valida.";
     } else {
         $stmt = $mysqli->prepare("
-            SELECT ID_utente, Email, Tipo_utente, Password_hash
+            SELECT ID_utente, Email, Password_hash
             FROM Utenti
             WHERE Email = ?
             LIMIT 1
@@ -23,21 +24,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $errors[] = "Errore interno (prepare).";
         } else {
             $stmt->bind_param("s", $email);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $user = $res ? $res->fetch_assoc() : null;
+            $executed = $stmt->execute();
+            if (!$executed) {
+                $errors[] = "Errore interno (execute).";
+            } else {
+                $res = $stmt->get_result();
+                $user = $res ? $res->fetch_assoc() : null;
+            }
             $stmt->close();
 
-            if (!$user || !password_verify($password, $user["Password_hash"])) {
-                $errors[] = "Credenziali non corrette.";
+            if (!$user) {
+                $errors[] = "Email non trovata nel sistema.";
+            } elseif (!password_verify($password, $user["Password_hash"])) {
+                $errors[] = "❌ Password errata. Riprova.";
             } else {
-                session_regenerate_id(true);
-                $_SESSION["user_id"] = (int)$user["ID_utente"];
-                $_SESSION["email"] = $user["Email"];
-                $_SESSION["tipo_utente"] = $user["Tipo_utente"];
+                // Genera un token JWT visibile all'utente e non imposta ancora la sessione.
+                // L'utente dovrà validare il token (tramite la form) per essere reindirizzato alla dashboard.
+                require_once __DIR__ . '/api/jwt.php';
+                $ttlSeconds = 600; // durata in secondi
+                $generatedToken = create_jwt((int)$user['ID_utente'], $ttlSeconds, JWT_SECRET);
+                // Non eseguire redirect qui: il token viene mostrato nella vista e l'utente lo valida tramite validate_token.php
+                // in modo che solo dopo la validazione la sessione venga impostata e si entri nella dashboard.
 
-                header("Location: dashboard.php"); // cambia se vuoi
-                exit;
             }
         }
     }
@@ -164,6 +172,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <input type="password" name="password" required>
 
     <button type="submit">Entra</button>
+  </form>
+
+  <?php if (!empty($generatedToken)): ?>
+    <hr>
+    <h2 style="text-align:center;">Token generato</h2>
+    <div style="max-width:500px;margin:0 auto;background:#f9f9f9;padding:12px;border-radius:8px;">
+      <p>Questo è il tuo token JWT (scade in <?= $ttlSeconds ?? 600 ?> secondi). Copialo o premi <strong>Valida token e accedi</strong> per accedere alla dashboard.</p>
+      <form method="post" action="validate_token.php">
+        <textarea name="token" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:5px;" readonly><?= htmlspecialchars($generatedToken, ENT_QUOTES, 'UTF-8') ?></textarea>
+        <button type="submit">Valida token e accedi</button>
+      </form>
+    </div>
+    <hr>
+  <?php endif; ?>
+
+  <h2 style="text-align:center;">Hai un token?</h2>
+  <form method="post" action="validate_token.php" style="max-width:500px;margin:0 auto;">
+    <label>Inserisci qui il token (JWT)</label>
+    <textarea name="token" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:5px;"></textarea>
+    <button type="submit">Valida token e accedi</button>
   </form>
 
   <a href="register.php">Crea un account</a>
