@@ -93,9 +93,9 @@
       <h3>Esercizio 1</h3>
       <p>Creazione e gestione articoli</p>
     </a>
-    <a href="BPIC/login.php" class="esercizio-card">
+    <a href="BPIC/dashboard.php" class="esercizio-card">
       <h3>BPIC</h3>
-      <p>Login e Registrazione</p>
+      <p>Sito Personale</p>
     </a>
   </div>
 </div>

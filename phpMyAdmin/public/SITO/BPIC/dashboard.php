@@ -4,246 +4,382 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
+
+// Recupera ruoli e privilegi dalla sessione se presenti, altrimenti dal DB
+$roles = $_SESSION['roles'] ?? null;
+$permissions = $_SESSION['permissions'] ?? null;
+
+if (!$roles || !$permissions) {
+    require_once __DIR__ . "/database.php";
+    $email = $_SESSION['email'];
+    $stmt = $mysqli->prepare('SELECT r.ID_ruolo, r.Nome_ruolo, p.ID_privilegio, p.Nome_privilegio, p.Risorsa, p.Azione
+        FROM Utente_Ruolo ur
+        JOIN Ruoli r ON r.ID_ruolo = ur.ID_ruolo
+        JOIN Ruolo_Privilegio rp ON rp.ID_ruolo = r.ID_ruolo
+        JOIN Privilegi p ON p.ID_privilegio = rp.ID_privilegio
+        WHERE ur.email_utente = ?');
+    if ($stmt) {
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $roles = [];
+        $permissions = [];
+        $roleMap = [];
+        $permMap = [];
+
+        while ($row = $result->fetch_assoc()) {
+            $roleId = (int)$row['ID_ruolo'];
+            if (!isset($roleMap[$roleId])) {
+                $roleMap[$roleId] = true;
+                $roles[] = ['id' => $roleId, 'name' => $row['Nome_ruolo']];
+            }
+
+            $permId = (int)$row['ID_privilegio'];
+            if (!isset($permMap[$permId])) {
+                $permMap[$permId] = true;
+                $permissions[] = ['id' => $permId, 'name' => $row['Nome_privilegio'], 'resource' => $row['Risorsa'], 'action' => $row['Azione']];
+            }
+        }
+
+        $stmt->close();
+        $_SESSION['roles'] = $roles;
+        $_SESSION['permissions'] = $permissions;
+    }
+}
+
+$roleNames = array_map(fn($r) => $r['name'], $roles ?? []);
+$isAdmin = in_array('admin', $roleNames, true);
+$isAbbonato = in_array('utente_abbonato', $roleNames, true);
+$isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>BPIC | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f6f8;
+        :root {
+            --blue-700: #2563eb;
+            --blue-500: #3b82f6;
+            --blue-100: #e0edff;
+            --slate-900: #0f172a;
+            --slate-600: #475569;
+            --white: #ffffff;
         }
-        .home-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 16px;
-            border-radius: 50%;
-            font-size: 24px;
-            cursor: pointer;
-            text-decoration: none;
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Inter', Arial, sans-serif;
+            background: radial-gradient(circle at top left, #eef4ff 0%, #f5f8ff 35%, #f8fafc 100%);
+            color: var(--slate-900);
+        }
+        a { text-decoration: none; color: inherit; }
+        .page { min-height: 100vh; }
+        .nav {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            padding: 24px 80px;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 20px;
+        }
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--blue-500);
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
-            width: 50px;
-            height: 50px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s, background 0.3s;
+            color: var(--white);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
         }
-        .home-btn:hover {
-            background: #764ba2;
-            transform: scale(1.1);
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            color: var(--slate-600);
+            font-weight: 500;
         }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        .nav-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
         }
-        h1 {
-            color: #2c3e50;
+        .btn {
+            border-radius: 12px;
+            padding: 10px 20px;
+            border: 1px solid transparent;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-outline {
+            background: transparent;
+            border-color: var(--blue-500);
+            color: var(--blue-500);
+        }
+        .btn-primary {
+            background: var(--blue-500);
+            color: var(--white);
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .hero {
             text-align: center;
-            margin-bottom: 30px;
+            padding: 40px 24px 20px;
         }
-        p {
-            text-align: center;
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            background: var(--blue-100);
+            color: var(--blue-700);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .hero-title {
+            font-size: 56px;
+            font-weight: 800;
+            margin: 24px 0 12px;
+            line-height: 1.1;
+        }
+        .hero-title span { color: var(--blue-500); }
+        .hero-subtitle {
+            max-width: 680px;
+            margin: 0 auto 28px;
+            color: var(--slate-600);
             font-size: 18px;
         }
-        a {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: transform 0.3s;
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
         }
-        a:hover {
-            transform: translateY(-2px);
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            padding: 40px 80px;
+        }
+        .feature-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            text-align: center;
+        }
+        .feature-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: var(--blue-100);
+            color: var(--blue-500);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+        .feature-card h3 { margin: 0 0 10px; font-size: 18px; }
+        .feature-card p { margin: 0; color: var(--slate-600); font-size: 14px; line-height: 1.5; }
+        .panel {
+            background: var(--white);
+            margin: 0 80px 60px;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        }
+        .panel h2 { margin-top: 0; }
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: var(--slate-600);
+            font-weight: 600;
+        }
+        .status.admin { color: #15803d; background: #dcfce7; }
+        .status.abbonato { color: #1d4ed8; background: #dbeafe; }
+        .status.non-abbonato { color: #b45309; background: #fef3c7; }
+        .split {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+        .list { margin: 0; padding-left: 18px; color: var(--slate-600); }
+        .token-box textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+        }
+        .token-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .token-actions button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            background: var(--blue-500);
+            color: var(--white);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .token-actions button.secondary {
+            background: #e2e8f0;
+            color: var(--slate-600);
+        }
+        .token-result {
+            margin-top: 12px;
+            color: var(--slate-600);
+            white-space: pre-line;
+        }
+        .footer-actions {
+            display: flex;
+            justify-content: center;
+            padding-bottom: 60px;
+        }
+        @media (max-width: 900px) {
+            .nav { padding: 20px 24px; flex-wrap: wrap; gap: 16px; }
+            .feature-grid, .panel { padding: 32px 24px; margin: 0 24px 48px; }
+            .feature-grid { padding: 24px; }
+            .hero-title { font-size: 42px; }
         }
     </style>
 </head>
 <body>
-
-<a href="../index.php" class="home-btn" title="Home">🏠</a>
-
-<div class="container">
-    <h1>Benvenuto nella Dashboard</h1>
-    <p>Sei loggato come <?php echo htmlspecialchars($_SESSION['email']); ?></p>
-
-    <?php
-    // Recupera ruoli e privilegi dalla sessione se presenti, altrimenti dal DB
-    $roles = $_SESSION['roles'] ?? null;
-    $permissions = $_SESSION['permissions'] ?? null;
-
-    if (!$roles || !$permissions) {
-        require_once __DIR__ . "/database.php";
-        $email = $_SESSION['email'];
-        $stmt = $mysqli->prepare('SELECT r.ID_ruolo, r.Nome_ruolo, p.ID_privilegio, p.Nome_privilegio, p.Risorsa, p.Azione
-            FROM Utente_Ruolo ur
-            JOIN Ruoli r ON r.ID_ruolo = ur.ID_ruolo
-            JOIN Ruolo_Privilegio rp ON rp.ID_ruolo = r.ID_ruolo
-            JOIN Privilegi p ON p.ID_privilegio = rp.ID_privilegio
-            WHERE ur.email_utente = ?');
-        if ($stmt) {
-            $stmt->bind_param('s', $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            $roles = [];
-            $permissions = [];
-            $roleMap = [];
-            $permMap = [];
-
-            while ($row = $result->fetch_assoc()) {
-                $roleId = (int)$row['ID_ruolo'];
-                if (!isset($roleMap[$roleId])) {
-                    $roleMap[$roleId] = true;
-                    $roles[] = ['id' => $roleId, 'name' => $row['Nome_ruolo']];
-                }
-
-                $permId = (int)$row['ID_privilegio'];
-                if (!isset($permMap[$permId])) {
-                    $permMap[$permId] = true;
-                    $permissions[] = ['id' => $permId, 'name' => $row['Nome_privilegio'], 'resource' => $row['Risorsa'], 'action' => $row['Azione']];
-                }
-            }
-
-            $stmt->close();
-            // Salva in sessione per future richieste
-            $_SESSION['roles'] = $roles;
-            $_SESSION['permissions'] = $permissions;
-        }
-    }
-    ?>
-
-    <div style="margin-top:20px; text-align:center;">
-        <?php
-        $roleNames = array_map(fn($r) => $r['name'], $roles ?? []);
-        $isAdmin = in_array('admin', $roleNames, true);
-        $isAbbonato = in_array('utente_abbonato', $roleNames, true);
-        $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
-        ?>
-
-        <p>
-            <strong>Stato:</strong>
-            <?php if ($isAdmin): ?> <span style="color:green; font-weight:bold;">ADMIN</span>
-            <?php elseif ($isAbbonato): ?> <span style="color:blue; font-weight:bold;">Utente abbonato</span>
-            <?php elseif ($isNonAbbonato): ?> <span style="color:orange; font-weight:bold;">Utente non abbonato</span>
-            <?php else: ?> <span style="color:grey;">Non definito</span>
-            <?php endif; ?>
-        </p>
-
-        <strong>Ruoli:</strong>
-        <?php if (!empty($roles)): ?>
-            <ul style="list-style:none;padding:0;">
-                <?php foreach ($roles as $r): ?>
-                    <li><?php echo htmlspecialchars($r['name']); ?></li>
-                <?php endforeach; ?>
-            </ul>
-        <?php else: ?>
-            <p>Nessun ruolo assegnato</p>
-        <?php endif; ?>
-
-        <strong>Privilegi:</strong>
-        <?php if (!empty($permissions)): ?>
-            <ul style="text-align:left; display:inline-block;">
-                <?php foreach ($permissions as $p): ?>
-                    <li><?php echo htmlspecialchars($p['name']); ?> — <em><?php echo htmlspecialchars($p['resource']); ?> (<?php echo htmlspecialchars($p['action']); ?>)</em></li>
-                <?php endforeach; ?>
-            </ul>
-        <?php else: ?>
-            <p>Nessun privilegio trovato</p>
-        <?php endif; ?>
-    </div>
-
-    <hr>
-
-    <div style="margin-top:20px; text-align:center;">
-        <h2>Token personale</h2>
-        <p>Puoi generare un token valido per 24 ore per testare le API o condividerlo con servizi esterni.</p>
-
-        <div style="max-width:700px;margin:0 auto;text-align:left;">
-            <textarea id="tokenArea" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:5px;" readonly></textarea>
-            <div style="margin-top:8px;display:flex;gap:8px;">
-                <button id="genBtn">Genera token</button>
-                <button id="copyBtn">Copia token</button>
-                <button id="verifyBtn">Verifica token</button>
-            </div>
-            <div id="tokenResult" style="margin-top:12px;color:#333;"></div>
+<div class="page">
+    <nav class="nav">
+        <div class="brand">
+            <span class="brand-icon">📄</span>
+            BPIC
         </div>
-    </div>
+        <div class="nav-links">
+            <a href="#funzionalita">Funzionalità</a>
+            <a href="#prezzi">Prezzi</a>
+            <a href="#area-personale">Area personale</a>
+        </div>
+        <div class="nav-actions">
+            <a class="btn btn-outline" href="login.php">Accedi</a>
+            <a class="btn btn-primary" href="register.php">Registrati</a>
+        </div>
+    </nav>
 
-    <a href="logout.php">Logout</a>
+    <section class="hero">
+        <div class="pill">⚡ Genera la tua busta paga in pochi click</div>
+        <h1 class="hero-title">La tua busta paga,<br><span>semplificata</span></h1>
+        <p class="hero-subtitle">Calcola stipendio lordo, netto, tasse e contributi in modo preciso. Gestisci straordinari, ferie, malattie e tutte le voci variabili della tua retribuzione.</p>
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="register.php">Inizia Gratis →</a>
+            <a class="btn btn-outline" href="login.php">Accedi</a>
+        </div>
+    </section>
 
-    <script>
-        document.getElementById('genBtn').addEventListener('click', async function () {
-            const r = await fetch('api/generate_token.php', { method: 'POST' });
-            if (!r.ok) {
-                document.getElementById('tokenResult').textContent = 'Errore nella generazione del token.';
-                return;
-            }
-            const data = await r.json();
-            if (data.token) {
-                document.getElementById('tokenArea').value = data.token;
-                document.getElementById('tokenResult').textContent = 'Token generato (scade in ' + data.expires_in + ' secondi).';
-            } else if (data.error) {
-                document.getElementById('tokenResult').textContent = data.error;
-            }
-        });
+    <section id="funzionalita" class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">📑</div>
+            <h3>Calcoli precisi</h3>
+            <p>IRPEF, INPS, addizionali regionali e comunali calcolati secondo la normativa italiana.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Dati sicuri</h3>
+            <p>I tuoi dati personali e contrattuali sono protetti e accessibili solo a te.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Istantaneo</h3>
+            <p>Genera la busta paga in tempo reale, esporta in PDF e invia via email.</p>
+        </div>
+    </section>
 
-        document.getElementById('copyBtn').addEventListener('click', async function () {
-            const token = document.getElementById('tokenArea').value;
-            if (!token) {
-                document.getElementById('tokenResult').textContent = 'Nessun token da copiare.';
-                return;
-            }
-            try {
-                await navigator.clipboard.writeText(token);
-                document.getElementById('tokenResult').textContent = 'Token copiato negli appunti.';
-            } catch (e) {
-                document.getElementById('tokenResult').textContent = 'Impossibile copiare (browser non supportato).';
-            }
-        });
+    <section id="area-personale" class="panel">
+        <h2>Area personale</h2>
+        <p>Benvenuto, <?php echo htmlspecialchars($_SESSION['email']); ?>. Qui trovi il riepilogo del tuo account e gli strumenti per le API.</p>
+        <div>
+            <?php if ($isAdmin): ?>
+                <span class="status admin">ADMIN</span>
+            <?php elseif ($isAbbonato): ?>
+                <span class="status abbonato">Utente abbonato</span>
+            <?php elseif ($isNonAbbonato): ?>
+                <span class="status non-abbonato">Utente non abbonato</span>
+            <?php else: ?>
+                <span class="status">Non definito</span>
+            <?php endif; ?>
+        </div>
 
-        document.getElementById('verifyBtn').addEventListener('click', async function () {
-            const token = document.getElementById('tokenArea').value;
-            if (!token) {
-                document.getElementById('tokenResult').textContent = 'Nessun token da verificare.';
-                return;
-            }
-            const r = await fetch('api/verify_token.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token })
-            });
-            const data = await r.json();
-            if (!r.ok) {
-                document.getElementById('tokenResult').textContent = data.error || 'Errore nella verifica.';
-                return;
-            }
-            if (!data.valid) {
-                document.getElementById('tokenResult').textContent = 'Token non valido: ' + (data.error ?? '');
-                return;
-            }
-            // Mostra ruolo e privilegi di risposta
-            let out = 'Token valido per: ' + (data.email ?? 'utente') + '\n';
-            out += 'Ruoli: ' + ((data.roles || []).map(r => r.name).join(', ') || 'nessuno') + '\n';
-            out += 'Privilegi: ' + ((data.permissions || []).map(p => p.name).join(', ') || 'nessuno');
-            document.getElementById('tokenResult').textContent = out;
-        });
-    </script>
+        <div class="split">
+            <div>
+                <h3>Ruoli</h3>
+                <?php if (!empty($roles)): ?>
+                    <ul class="list">
+                        <?php foreach ($roles as $r): ?>
+                            <li><?php echo htmlspecialchars($r['name']); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p class="hero-subtitle">Nessun ruolo assegnato.</p>
+                <?php endif; ?>
+            </div>
+            <div>
+                <h3>Privilegi</h3>
+                <?php if (!empty($permissions)): ?>
+                    <ul class="list">
+                        <?php foreach ($permissions as $p): ?>
+                            <li><?php echo htmlspecialchars($p['name']); ?> — <em><?php echo htmlspecialchars($p['resource']); ?> (<?php echo htmlspecialchars($p['action']); ?>)</em></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p class="hero-subtitle">Nessun privilegio trovato.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="split">
+
+            <div>
+                <h3>Azioni rapide</h3>
+                <p class="hero-subtitle">Gestisci il tuo profilo, aggiorna i dati oppure esci in sicurezza dal sistema.</p>
+                <div class="hero-actions" style="justify-content:flex-start;">
+                    <a class="btn btn-outline" href="../index.php">Torna alla home</a>
+                    <a class="btn btn-primary" href="logout.php">Logout</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="prezzi" class="panel" style="text-align:center;">
+        <h2>Prezzi chiari e trasparenti</h2>
+        <p class="hero-subtitle">Scegli il piano giusto per la tua azienda o per il tuo team HR.</p>
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="register.php">Prova gratuita</a>
+        </div>
+    </section>
+
 </div>
 
+<script>
+</script>
 </body>
 </html>
