@@ -278,7 +278,6 @@ $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
         <div class="nav-links">
             <a href="#funzionalita">Funzionalità</a>
             <a href="#prezzi">Prezzi</a>
-            <a href="#area-personale">Area personale</a>
         </div>
         <div class="nav-actions">
             <a class="btn btn-outline" href="login.php">Accedi</a>
@@ -314,60 +313,6 @@ $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
         </div>
     </section>
 
-    <section id="area-personale" class="panel">
-        <h2>Area personale</h2>
-        <p>Benvenuto, <?php echo htmlspecialchars($_SESSION['email']); ?>. Qui trovi il riepilogo del tuo account e gli strumenti per le API.</p>
-        <div>
-            <?php if ($isAdmin): ?>
-                <span class="status admin">ADMIN</span>
-            <?php elseif ($isAbbonato): ?>
-                <span class="status abbonato">Utente abbonato</span>
-            <?php elseif ($isNonAbbonato): ?>
-                <span class="status non-abbonato">Utente non abbonato</span>
-            <?php else: ?>
-                <span class="status">Non definito</span>
-            <?php endif; ?>
-        </div>
-
-        <div class="split">
-            <div>
-                <h3>Ruoli</h3>
-                <?php if (!empty($roles)): ?>
-                    <ul class="list">
-                        <?php foreach ($roles as $r): ?>
-                            <li><?php echo htmlspecialchars($r['name']); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php else: ?>
-                    <p class="hero-subtitle">Nessun ruolo assegnato.</p>
-                <?php endif; ?>
-            </div>
-            <div>
-                <h3>Privilegi</h3>
-                <?php if (!empty($permissions)): ?>
-                    <ul class="list">
-                        <?php foreach ($permissions as $p): ?>
-                            <li><?php echo htmlspecialchars($p['name']); ?> — <em><?php echo htmlspecialchars($p['resource']); ?> (<?php echo htmlspecialchars($p['action']); ?>)</em></li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php else: ?>
-                    <p class="hero-subtitle">Nessun privilegio trovato.</p>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <div class="split">
-
-            <div>
-                <h3>Azioni rapide</h3>
-                <p class="hero-subtitle">Gestisci il tuo profilo, aggiorna i dati oppure esci in sicurezza dal sistema.</p>
-                <div class="hero-actions" style="justify-content:flex-start;">
-                    <a class="btn btn-outline" href="../index.php">Torna alla home</a>
-                    <a class="btn btn-primary" href="logout.php">Logout</a>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <section id="prezzi" class="panel" style="text-align:center;">
         <h2>Prezzi chiari e trasparenti</h2>

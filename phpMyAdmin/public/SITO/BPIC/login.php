@@ -145,6 +145,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     a:hover {
       text-decoration: underline;
     }
+    .token-box {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
+    .token-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      align-items: center;
+    }
+    .btn-secondary {
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+    .token-hint {
+      font-size: 14px;
+      color: #555;
+    }
+    .copy-status {
+      font-size: 13px;
+      color: #1f6feb;
+      min-height: 18px;
+    }
   </style>
 </head>
 <body>
@@ -177,12 +205,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <?php if (!empty($generatedToken)): ?>
     <hr>
     <h2 style="text-align:center;">Token generato</h2>
-    <div style="max-width:500px;margin:0 auto;background:#f9f9f9;padding:12px;border-radius:8px;">
-      <p>Questo è il tuo token JWT (scade in <?= $ttlSeconds ?? 600 ?> secondi). Copialo o premi <strong>Valida token e accedi</strong> per accedere alla dashboard.</p>
-      <form method="post" action="validate_token.php">
-        <textarea name="token" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:5px;" readonly><?= htmlspecialchars($generatedToken, ENT_QUOTES, 'UTF-8') ?></textarea>
-        <button type="submit">Valida token e accedi</button>
-      </form>
+    <div class="token-box">
+      <p class="token-hint">Questo e il tuo token JWT (scade in <?= $ttlSeconds ?? 600 ?> secondi). Copialo e incollalo nella casella di validazione qui sotto.</p>
+      <textarea id="generated-token" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:5px;" readonly><?= htmlspecialchars($generatedToken, ENT_QUOTES, 'UTF-8') ?></textarea>
+      <div class="token-actions">
+        <button type="button" class="btn-secondary" id="copy-token">Copia token</button>
+        <span class="copy-status" id="copy-status" aria-live="polite"></span>
+      </div>
     </div>
     <hr>
   <?php endif; ?>
@@ -196,6 +225,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
   <a href="register.php">Crea un account</a>
 </div>
+
+<script>
+  const copyBtn = document.getElementById('copy-token');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const tokenField = document.getElementById('generated-token');
+      const status = document.getElementById('copy-status');
+      if (!tokenField || !status) {
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(tokenField.value);
+        status.textContent = 'Token copiato.';
+      } catch (err) {
+        status.textContent = 'Copia non riuscita.';
+      }
+    });
+  }
+</script>
 
 </body>
 </html>

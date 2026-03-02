@@ -92,6 +92,6 @@ if ($stmt) {
     $_SESSION['permissions'] = $permissions;
 }
 
-// Reindirizza alla dashboard
-header('Location: dashboard.php');
+// Reindirizza al profilo contratto
+header('Location: Profilo_contratto.php');
 exit;
