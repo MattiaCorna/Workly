@@ -195,6 +195,68 @@ function fetch_view($mysqli, string $viewName, bool $isAdmin, int $userId): arra
     return $rows;
 }
 
+function ensure_t14_test_table(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS T14_Test_BustaPaga (
+        ID_test INT AUTO_INCREMENT PRIMARY KEY,
+        ID_utente INT NOT NULL,
+        scenario ENUM('seed','atomic','non_atomic') NOT NULL,
+        step_code VARCHAR(20) NOT NULL DEFAULT 'MAIN',
+        contratto_tipo VARCHAR(50) NOT NULL,
+        retribuzione_base DECIMAL(10,2) NOT NULL DEFAULT 0,
+        bonus DECIMAL(10,2) NOT NULL DEFAULT 0,
+        straordinari_ore DECIMAL(8,2) NOT NULL DEFAULT 0,
+        aliquota_tasse DECIMAL(6,4) NOT NULL DEFAULT 0,
+        giorni_ferie INT NOT NULL DEFAULT 0,
+        lordo DECIMAL(10,2) NULL,
+        netto DECIMAL(10,2) NULL,
+        tasse DECIMAL(10,2) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        batch_uuid VARCHAR(36) NOT NULL,
+        UNIQUE KEY uq_batch_step (batch_uuid, step_code),
+        KEY idx_t14_utente (ID_utente)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+function t14_load_seed(PDO $pdo, int $userId): array
+{
+    $stmt = $pdo->prepare('SELECT contratto_tipo, aliquota_tasse FROM T14_Test_BustaPaga WHERE ID_utente = ? AND scenario = ? ORDER BY ID_test DESC LIMIT 1');
+    $stmt->execute([$userId, 'seed']);
+    $contratto = $stmt->fetch();
+
+    $stmt = $pdo->prepare('SELECT retribuzione_base, bonus, straordinari_ore, giorni_ferie FROM T14_Test_BustaPaga WHERE ID_utente = ? AND scenario = ? ORDER BY ID_test DESC LIMIT 1');
+    $stmt->execute([$userId, 'seed']);
+    $datiMensili = $stmt->fetch();
+
+    if (!$contratto || !$datiMensili) {
+        throw new RuntimeException('Seed T14 non trovato. Esegui prima use_case=t14_test_setup.');
+    }
+
+    return [
+        'contratto' => $contratto,
+        'dati_mensili' => $datiMensili,
+    ];
+}
+
+function t14_calcolo(array $contratto, array $datiMensili): array
+{
+    $base = (float)$datiMensili['retribuzione_base'];
+    $bonus = (float)$datiMensili['bonus'];
+    $oreStraordinario = (float)$datiMensili['straordinari_ore'];
+    $aliquota = (float)$contratto['aliquota_tasse'];
+
+    $lordo = $base + $bonus + ($oreStraordinario * 12.5);
+    $tasse = $lordo * $aliquota;
+    $netto = $lordo - $tasse;
+
+    return [
+        'lordo' => round($lordo, 2),
+        'netto' => round($netto, 2),
+        'tasse' => round($tasse, 2),
+        'ferie' => (int)$datiMensili['giorni_ferie'],
+    ];
+}
+
 if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
     send_json(405, ['error' => 'Metodo non consentito.']);
 }
@@ -277,6 +339,111 @@ switch ($useCase) {
             'use_case' => $useCase,
             'message' => 'Busta paga creata con successo.',
             'id_busta' => $idBusta,
+        ]);
+
+    case 't14_test_setup':
+        require_permission($auth, 'buste_paga', 'INSERT');
+        if ($method !== 'POST') {
+            send_json(405, ['error' => 'Metodo richiesto: POST']);
+        }
+
+        ensure_t14_test_table($pdo);
+
+        $pdo->prepare('DELETE FROM T14_Test_BustaPaga WHERE ID_utente = ?')->execute([$currentUserId]);
+
+        $batch = bin2hex(random_bytes(16));
+        $stmt = $pdo->prepare('INSERT INTO T14_Test_BustaPaga (ID_utente, scenario, step_code, contratto_tipo, retribuzione_base, bonus, straordinari_ore, aliquota_tasse, giorni_ferie, lordo, netto, tasse, batch_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?)');
+        $stmt->execute([$currentUserId, 'seed', 'SEED', 'Metalmeccanico', 1800.00, 120.00, 10.00, 0.2350, 26, $batch]);
+
+        send_json(201, [
+            'use_case' => $useCase,
+            'message' => 'Tabella di test T14 pronta e seed inserito.',
+            'seed_batch' => $batch,
+        ]);
+
+    case 't14_generazione_busta_paga_atomic':
+        require_permission($auth, 'buste_paga', 'INSERT');
+        if ($method !== 'POST') {
+            send_json(405, ['error' => 'Metodo richiesto: POST']);
+        }
+
+        ensure_t14_test_table($pdo);
+
+        try {
+            $seed = t14_load_seed($pdo, $currentUserId);
+            $calc = t14_calcolo($seed['contratto'], $seed['dati_mensili']);
+
+            $batch = bin2hex(random_bytes(16));
+            $pdo->beginTransaction();
+
+            $stmt = $pdo->prepare('INSERT INTO T14_Test_BustaPaga (ID_utente, scenario, step_code, contratto_tipo, retribuzione_base, bonus, straordinari_ore, aliquota_tasse, giorni_ferie, lordo, netto, tasse, batch_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$currentUserId, 'atomic', 'MAIN', (string)$seed['contratto']['contratto_tipo'], (float)$seed['dati_mensili']['retribuzione_base'], (float)$seed['dati_mensili']['bonus'], (float)$seed['dati_mensili']['straordinari_ore'], (float)$seed['contratto']['aliquota_tasse'], (int)$seed['dati_mensili']['giorni_ferie'], $calc['lordo'], $calc['netto'], $calc['tasse'], $batch]);
+            $stmt->execute([$currentUserId, 'atomic', 'AUDIT', (string)$seed['contratto']['contratto_tipo'], (float)$seed['dati_mensili']['retribuzione_base'], (float)$seed['dati_mensili']['bonus'], (float)$seed['dati_mensili']['straordinari_ore'], (float)$seed['contratto']['aliquota_tasse'], (int)$seed['dati_mensili']['giorni_ferie'], $calc['lordo'], $calc['netto'], $calc['tasse'], $batch]);
+
+            $pdo->commit();
+
+            send_json(201, [
+                'use_case' => $useCase,
+                'message' => 'T14 atomica completata con successo (tutto salvato).',
+                'batch' => $batch,
+                'calcolo' => $calc,
+            ]);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            send_json(500, ['error' => 'Errore T14 atomica.', 'detail' => $e->getMessage()]);
+        }
+
+    case 't14_generazione_busta_paga_non_atomic':
+        require_permission($auth, 'buste_paga', 'INSERT');
+        if ($method !== 'POST') {
+            send_json(405, ['error' => 'Metodo richiesto: POST']);
+        }
+
+        ensure_t14_test_table($pdo);
+
+        try {
+            $seed = t14_load_seed($pdo, $currentUserId);
+            $calc = t14_calcolo($seed['contratto'], $seed['dati_mensili']);
+            $batch = bin2hex(random_bytes(16));
+
+            // NO TRANSACTION: simuliamo una scrittura parziale che lascia inconsistenza.
+            $stmt = $pdo->prepare('INSERT INTO T14_Test_BustaPaga (ID_utente, scenario, step_code, contratto_tipo, retribuzione_base, bonus, straordinari_ore, aliquota_tasse, giorni_ferie, lordo, netto, tasse, batch_uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$currentUserId, 'non_atomic', 'MAIN', (string)$seed['contratto']['contratto_tipo'], (float)$seed['dati_mensili']['retribuzione_base'], (float)$seed['dati_mensili']['bonus'], (float)$seed['dati_mensili']['straordinari_ore'], (float)$seed['contratto']['aliquota_tasse'], (int)$seed['dati_mensili']['giorni_ferie'], $calc['lordo'], $calc['netto'], $calc['tasse'], $batch]);
+
+            // Seconda INSERT volutamente errata: duplicate key su (batch_uuid, step_code).
+            $stmt->execute([$currentUserId, 'non_atomic', 'MAIN', (string)$seed['contratto']['contratto_tipo'], (float)$seed['dati_mensili']['retribuzione_base'], (float)$seed['dati_mensili']['bonus'], (float)$seed['dati_mensili']['straordinari_ore'], (float)$seed['contratto']['aliquota_tasse'], (int)$seed['dati_mensili']['giorni_ferie'], $calc['lordo'], $calc['netto'], $calc['tasse'], $batch]);
+
+            send_json(201, [
+                'use_case' => $useCase,
+                'message' => 'Scenario non atomico concluso senza errori (non previsto).',
+            ]);
+        } catch (Throwable $e) {
+            $check = $pdo->prepare('SELECT COUNT(*) AS cnt FROM T14_Test_BustaPaga WHERE ID_utente = ? AND scenario = ? AND batch_uuid = ?');
+            $check->execute([$currentUserId, 'non_atomic', $batch ?? '']);
+            $row = $check->fetch();
+
+            send_json(500, [
+                'use_case' => $useCase,
+                'error' => 'Scenario non atomico fallito: database in stato parziale (dimostrazione problema).',
+                'detail' => $e->getMessage(),
+                'partial_rows_left' => (int)($row['cnt'] ?? 0),
+                'batch' => $batch ?? null,
+            ]);
+        }
+
+    case 't14_test_state':
+        require_permission($auth, 'buste_paga', 'INSERT');
+        ensure_t14_test_table($pdo);
+
+        $stmt = $pdo->prepare('SELECT ID_test, scenario, step_code, contratto_tipo, lordo, netto, tasse, batch_uuid, created_at FROM T14_Test_BustaPaga WHERE ID_utente = ? ORDER BY ID_test DESC LIMIT 30');
+        $stmt->execute([$currentUserId]);
+        $rows = $stmt->fetchAll();
+
+        send_json(200, [
+            'use_case' => $useCase,
+            'rows' => $rows,
         ]);
 
     case 'download_pdf':

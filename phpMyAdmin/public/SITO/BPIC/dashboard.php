@@ -285,6 +285,7 @@ $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
         <div class="hero-actions">
             <a class="btn btn-primary" href="/SITO/BPIC/register.php">Inizia Gratis →</a>
             <a class="btn btn-outline" href="/SITO/BPIC/login.php">Accedi</a>
+            <a class="btn btn-outline" href="/SITO/BPIC/test_transazione_t14.php">Test Transazione T14</a>
         </div>
     </section>
 
