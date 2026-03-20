@@ -382,11 +382,16 @@ switch ($useCase) {
 
             $pdo->commit();
 
+            $check = $pdo->prepare('SELECT COUNT(*) AS cnt FROM T14_Test_BustaPaga WHERE ID_utente = ? AND batch_uuid = ?');
+            $check->execute([$currentUserId, $batch]);
+            $left = $check->fetch();
+
             send_json(201, [
                 'use_case' => $useCase,
-                'message' => 'T14 atomica completata con successo (tutto salvato).',
+                'message' => 'T14 con transazione eseguita e salvata: beginTransaction + query + commit.',
                 'batch' => $batch,
                 'calcolo' => $calc,
+                'rows_after_commit' => (int)($left['cnt'] ?? 0),
             ]);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {

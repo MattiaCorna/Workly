@@ -100,14 +100,14 @@ if (empty($_SESSION['user_id'])) {
   <div class="wrap">
     <div class="card">
       <h1>Test T14 - Generazione busta paga</h1>
-      <p>Workflow testato: SELECT Contratto, SELECT DatiMensili, CALCOLO, INSERT BustaPaga, COMMIT.</p>
+      <p>Workflow testato: BEGIN TRANSACTION, SELECT Contratto, SELECT DatiMensili, CALCOLO, INSERT BustaPaga, COMMIT.</p>
       <div class="legend">
-        <span class="pill ok">Atomica: o tutto o niente</span>
+        <span class="pill ok">Transazione con commit: dati persistiti</span>
         <span class="pill bad">Non atomica: rischio stato parziale</span>
       </div>
       <div class="grid">
         <button id="setupBtn" class="primary">1) Setup tabella di test + seed</button>
-        <button id="atomicBtn" class="primary">2) Esegui caso ATOMICO</button>
+        <button id="atomicBtn" class="primary">2) Esegui TRANSAZIONE + COMMIT</button>
         <button id="nonAtomicBtn" class="danger">3) Esegui caso NON atomico</button>
         <button id="refreshBtn" class="neutral">4) Aggiorna stato tabella</button>
         <a class="btn neutral" href="/SITO/BPIC/dashboard.php">Torna alla dashboard</a>
