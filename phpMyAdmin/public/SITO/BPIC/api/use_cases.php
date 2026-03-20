@@ -57,7 +57,7 @@ function bearer_token(): ?string
     return $matches[1];
 }
 
-function fetch_user_and_permissions(mysqli $mysqli, int $userId): array
+function fetch_user_and_permissions($mysqli, int $userId): array
 {
     $stmt = $mysqli->prepare('SELECT ID_utente, Email, N_Telefono FROM Utenti WHERE ID_utente = ? LIMIT 1');
     if (!$stmt) {
@@ -152,7 +152,7 @@ function require_permission(array $auth, string $resource, string $action): void
     }
 }
 
-function fetch_view(mysqli $mysqli, string $viewName, bool $isAdmin, int $userId): array
+function fetch_view($mysqli, string $viewName, bool $isAdmin, int $userId): array
 {
     if (!preg_match('/^[a-zA-Z0-9_]+$/', $viewName)) {
         send_json(400, ['error' => 'Nome vista non valido.']);

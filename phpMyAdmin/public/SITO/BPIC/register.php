@@ -18,57 +18,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     if (!$errors) {
-        // Controllo email già presente
-        $stmt = $mysqli->prepare("SELECT ID_utente FROM Utenti WHERE Email = ? LIMIT 1");
-        if (!$stmt) {
-            $errors[] = "Errore interno (prepare).";
+      try {
+        $stmt = $pdo->prepare("SELECT ID_utente FROM Utenti WHERE Email = ? LIMIT 1");
+        $stmt->execute([$email]);
+        $exists = $stmt->fetch();
+
+        if ($exists) {
+          $errors[] = "Email già registrata.";
         } else {
-            $stmt->bind_param("s", $email);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $exists = $res && $res->fetch_assoc();
-            $stmt->close();
+          $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+          $telefonoParam = ($telefono !== "") ? $telefono : null;
 
-            if ($exists) {
-                $errors[] = "Email già registrata.";
-            } else {
-                $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+          $pdo->beginTransaction();
 
-                // Inserisco utente
-                $idBusta = null;
+          $stmt = $pdo->prepare("INSERT INTO Utenti (N_Telefono, Email, ID_busta, Password_hash) VALUES (?, ?, ?, ?)");
+          $stmt->execute([$telefonoParam, $email, null, $passwordHash]);
 
-                $stmt = $mysqli->prepare("
-                    INSERT INTO Utenti (N_Telefono, Email, ID_busta, Password_hash)
-                    VALUES (?, ?, ?, ?)
-                ");
-                if (!$stmt) {
-                    $errors[] = "Errore interno (prepare).";
-                } else {
-                    $telefonoParam = ($telefono !== "") ? $telefono : null;
+          $stmt2 = $pdo->prepare("INSERT INTO Utente_Ruolo (email_utente, ID_ruolo) VALUES (?, 3)");
+          $stmt2->execute([$email]);
 
-                    $stmt->bind_param(
-                        "ssis",
-                        $telefonoParam,
-                        $email,
-                        $idBusta,
-                        $passwordHash
-                    );
-                    if ($stmt->execute()) {
-                        // Assegna ruolo non abbonato al nuovo utente
-                        $stmt2 = $mysqli->prepare("INSERT INTO Utente_Ruolo (email_utente, ID_ruolo) VALUES (?, 3)");
-                        if ($stmt2) {
-                            $stmt2->bind_param("s", $email);
-                            $stmt2->execute();
-                            $stmt2->close();
-                        }
-                        $ok = true;
-                    } else {
-                        $errors[] = "Errore durante la registrazione.";
-                    }
-                    $stmt->close();
-                }
-            }
+          $pdo->commit();
+          $ok = true;
         }
+      } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+          $pdo->rollBack();
+        }
+        $errors[] = "Errore durante la registrazione.";
+      }
     }
 }
 ?>

@@ -9,40 +9,36 @@ $permissions = $isAuthenticated ? ($_SESSION['permissions'] ?? null) : [];
 if ($isAuthenticated && (!$roles || !$permissions) && isset($_SESSION['email'])) {
     require_once __DIR__ . "/database.php";
     $email = $_SESSION['email'];
-    $stmt = $mysqli->prepare('SELECT r.ID_ruolo, r.Nome_ruolo, p.ID_privilegio, p.Nome_privilegio, p.Risorsa, p.Azione
+    $stmt = $pdo->prepare('SELECT r.ID_ruolo, r.Nome_ruolo, p.ID_privilegio, p.Nome_privilegio, p.Risorsa, p.Azione
         FROM Utente_Ruolo ur
         JOIN Ruoli r ON r.ID_ruolo = ur.ID_ruolo
         JOIN Ruolo_Privilegio rp ON rp.ID_ruolo = r.ID_ruolo
         JOIN Privilegi p ON p.ID_privilegio = rp.ID_privilegio
         WHERE ur.email_utente = ?');
-    if ($stmt) {
-        $stmt->bind_param('s', $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+    $stmt->execute([$email]);
+    $result = $stmt->fetchAll();
 
-        $roles = [];
-        $permissions = [];
-        $roleMap = [];
-        $permMap = [];
+    $roles = [];
+    $permissions = [];
+    $roleMap = [];
+    $permMap = [];
 
-        while ($row = $result->fetch_assoc()) {
-            $roleId = (int)$row['ID_ruolo'];
-            if (!isset($roleMap[$roleId])) {
-                $roleMap[$roleId] = true;
-                $roles[] = ['id' => $roleId, 'name' => $row['Nome_ruolo']];
-            }
-
-            $permId = (int)$row['ID_privilegio'];
-            if (!isset($permMap[$permId])) {
-                $permMap[$permId] = true;
-                $permissions[] = ['id' => $permId, 'name' => $row['Nome_privilegio'], 'resource' => $row['Risorsa'], 'action' => $row['Azione']];
-            }
+    foreach ($result as $row) {
+        $roleId = (int)$row['ID_ruolo'];
+        if (!isset($roleMap[$roleId])) {
+            $roleMap[$roleId] = true;
+            $roles[] = ['id' => $roleId, 'name' => $row['Nome_ruolo']];
         }
 
-        $stmt->close();
-        $_SESSION['roles'] = $roles;
-        $_SESSION['permissions'] = $permissions;
+        $permId = (int)$row['ID_privilegio'];
+        if (!isset($permMap[$permId])) {
+            $permMap[$permId] = true;
+            $permissions[] = ['id' => $permId, 'name' => $row['Nome_privilegio'], 'resource' => $row['Risorsa'], 'action' => $row['Azione']];
+        }
     }
+
+    $_SESSION['roles'] = $roles;
+    $_SESSION['permissions'] = $permissions;
 }
 
 $roleNames = array_map(fn($r) => $r['name'], $roles ?? []);

@@ -47,17 +47,15 @@ function db_to_contratto(string $value): string
 $selectedContratto = '';
 $userId = (int)$_SESSION['user_id'];
 
-$stmt = $mysqli->prepare('SELECT tipologia_dipendente FROM Profilo_contratto WHERE ID_utente = ? LIMIT 1');
-if ($stmt) {
-  $stmt->bind_param('i', $userId);
-  if ($stmt->execute()) {
-    $res = $stmt->get_result();
-    $row = $res ? $res->fetch_assoc() : null;
-    if ($row) {
-      $selectedContratto = db_to_contratto((string)($row['tipologia_dipendente'] ?? ''));
-    }
+try {
+  $stmt = $pdo->prepare('SELECT tipologia_dipendente FROM Profilo_contratto WHERE ID_utente = ? LIMIT 1');
+  $stmt->execute([$userId]);
+  $row = $stmt->fetch();
+  if ($row) {
+    $selectedContratto = db_to_contratto((string)($row['tipologia_dipendente'] ?? ''));
   }
-  $stmt->close();
+} catch (PDOException $e) {
+  error_log('Profilo_contratto load error: ' . $e->getMessage());
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -65,15 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $dbValue = contratto_to_db($contratto);
 
   if ($dbValue !== '') {
-    $stmt = $mysqli->prepare("INSERT INTO Profilo_contratto (ID_utente, tipologia_dipendente, Livello_dipendente, Maggiorazione_notturna, Maggiorazione_straordinaria, Maggiorazione_festiva, Maggiorazione_prefestiva, Indennita_malattia, Indennita_reperibilita, Indennita_trasferta, Tredicesima, Quattordicesima) VALUES (?, ?, '1', 0, 0, 0, 0, 0, 0, 0, 'NO', 'NO') ON DUPLICATE KEY UPDATE tipologia_dipendente = VALUES(tipologia_dipendente)");
-    if ($stmt) {
-      $stmt->bind_param('is', $userId, $dbValue);
-      try {
-        $stmt->execute();
-      } catch (mysqli_sql_exception $e) {
-        error_log('Profilo_contratto submit error: ' . $e->getMessage());
-      }
-      $stmt->close();
+    try {
+      $stmt = $pdo->prepare("INSERT INTO Profilo_contratto (ID_utente, tipologia_dipendente, Livello_dipendente, Maggiorazione_notturna, Maggiorazione_straordinaria, Maggiorazione_festiva, Maggiorazione_prefestiva, Indennita_malattia, Indennita_reperibilita, Indennita_trasferta, Tredicesima, Quattordicesima) VALUES (?, ?, '1', 0, 0, 0, 0, 0, 0, 0, 'NO', 'NO') ON DUPLICATE KEY UPDATE tipologia_dipendente = VALUES(tipologia_dipendente)");
+      $stmt->execute([$userId, $dbValue]);
+    } catch (PDOException $e) {
+      error_log('Profilo_contratto submit error: ' . $e->getMessage());
     }
   }
 

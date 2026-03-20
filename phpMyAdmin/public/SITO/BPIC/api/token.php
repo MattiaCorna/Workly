@@ -33,23 +33,20 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
     exit;
 }
 
-$stmt = $mysqli->prepare('
+$stmt = $pdo->prepare('
     SELECT ID_utente, Email, Password_hash
     FROM Utenti
     WHERE Email = ?
     LIMIT 1
 ');
-if (!$stmt) {
+try {
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+} catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Errore interno (prepare).'], JSON_UNESCAPED_UNICODE);
     exit;
 }
-
-$stmt->bind_param('s', $email);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result ? $result->fetch_assoc() : null;
-$stmt->close();
 
 if (!$user || !password_verify($password, $user['Password_hash'])) {
     http_response_code(401);

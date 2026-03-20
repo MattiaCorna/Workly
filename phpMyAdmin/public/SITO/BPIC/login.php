@@ -14,39 +14,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = "Email non valida.";
     } else {
-        $stmt = $mysqli->prepare("
+      $stmt = $pdo->prepare(" 
             SELECT ID_utente, Email, Password_hash
             FROM Utenti
             WHERE Email = ?
             LIMIT 1
         ");
-        if (!$stmt) {
-            $errors[] = "Errore interno (prepare).";
-        } else {
-            $stmt->bind_param("s", $email);
-            $executed = $stmt->execute();
-            if (!$executed) {
-                $errors[] = "Errore interno (execute).";
-            } else {
-                $res = $stmt->get_result();
-                $user = $res ? $res->fetch_assoc() : null;
-            }
-            $stmt->close();
+      try {
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+      } catch (PDOException $e) {
+        $errors[] = "Errore interno (execute).";
+        $user = null;
+      }
 
-            if (!$user) {
-                $errors[] = "Email non trovata nel sistema.";
-            } elseif (!password_verify($password, $user["Password_hash"])) {
-                $errors[] = "❌ Password errata. Riprova.";
-            } else {
-                // Genera un token JWT visibile all'utente e non imposta ancora la sessione.
-                // L'utente dovrà validare il token (tramite la form) per essere reindirizzato alla dashboard.
-                require_once __DIR__ . '/api/jwt.php';
-                $ttlSeconds = 600; // durata in secondi
-                $generatedToken = create_jwt((int)$user['ID_utente'], $ttlSeconds, JWT_SECRET);
-                // Non eseguire redirect qui: il token viene mostrato nella vista e l'utente lo valida tramite validate_token.php
-                // in modo che solo dopo la validazione la sessione venga impostata e si entri nella dashboard.
-
-            }
+      if (!$user) {
+        $errors[] = "Email non trovata nel sistema.";
+      } elseif (!password_verify($password, $user["Password_hash"])) {
+        $errors[] = "❌ Password errata. Riprova.";
+      } else {
+        // Genera un token JWT visibile all'utente e non imposta ancora la sessione.
+        // L'utente dovrà validare il token (tramite la form) per essere reindirizzato alla dashboard.
+        require_once __DIR__ . '/api/jwt.php';
+        $ttlSeconds = 600; // durata in secondi
+        $generatedToken = create_jwt((int)$user['ID_utente'], $ttlSeconds, JWT_SECRET);
+        // Non eseguire redirect qui: il token viene mostrato nella vista e l'utente lo valida tramite validate_token.php
+        // in modo che solo dopo la validazione la sessione venga impostata e si entri nella dashboard.
         }
     }
 }

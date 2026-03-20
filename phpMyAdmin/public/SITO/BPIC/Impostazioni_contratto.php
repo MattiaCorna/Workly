@@ -63,7 +63,7 @@ $saveSuccess = false;
 $settingsTable = 'Impostazioni_contratto';
 
 try {
-  $mysqli->query("CREATE TABLE IF NOT EXISTS Impostazioni_contratto (
+  $pdo->exec("CREATE TABLE IF NOT EXISTS Impostazioni_contratto (
     ID_utente INT(100) NOT NULL,
     tipologia_dipendente ENUM('Statale','Mettalmeccanico','Commerciale','') NOT NULL DEFAULT '',
     Livello_dipendente VARCHAR(10) NOT NULL DEFAULT '',
@@ -78,31 +78,19 @@ try {
     Quattordicesima ENUM('SI','NO') NOT NULL DEFAULT 'NO',
     PRIMARY KEY (ID_utente)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-} catch (mysqli_sql_exception $e) {
+} catch (PDOException $e) {
   error_log('Impostazioni_contratto create table error: ' . $e->getMessage());
 }
 
 $savedRow = [];
-$stmt = $mysqli->prepare("SELECT * FROM {$settingsTable} WHERE ID_utente = ? LIMIT 1");
-if ($stmt) {
-  $stmt->bind_param('i', $userId);
-  if ($stmt->execute()) {
-    $res = $stmt->get_result();
-    $savedRow = $res ? (array)$res->fetch_assoc() : [];
-  }
-  $stmt->close();
-}
+$stmt = $pdo->prepare("SELECT * FROM {$settingsTable} WHERE ID_utente = ? LIMIT 1");
+$stmt->execute([$userId]);
+$savedRow = (array)($stmt->fetch() ?: []);
 
 if (empty($savedRow) && $settingsTable !== 'Profilo_contratto') {
-  $fallbackStmt = $mysqli->prepare('SELECT * FROM Profilo_contratto WHERE ID_utente = ? LIMIT 1');
-  if ($fallbackStmt) {
-    $fallbackStmt->bind_param('i', $userId);
-    if ($fallbackStmt->execute()) {
-      $fallbackRes = $fallbackStmt->get_result();
-      $savedRow = $fallbackRes ? (array)$fallbackRes->fetch_assoc() : [];
-    }
-    $fallbackStmt->close();
-  }
+  $fallbackStmt = $pdo->prepare('SELECT * FROM Profilo_contratto WHERE ID_utente = ? LIMIT 1');
+  $fallbackStmt->execute([$userId]);
+  $savedRow = (array)($fallbackStmt->fetch() ?: []);
 }
 
 $contratto = normalize_contratto((string)($_GET['contratto'] ?? ($_POST['contratto'] ?? '')));
@@ -138,29 +126,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dbTipologia = (string)$savedRow['tipologia_dipendente'];
   }
 
-  $stmt = $mysqli->prepare("INSERT INTO {$settingsTable} (ID_utente, tipologia_dipendente, Livello_dipendente, Maggiorazione_notturna, Maggiorazione_straordinaria, Maggiorazione_festiva, Maggiorazione_prefestiva, Indennita_malattia, Indennita_reperibilita, Indennita_trasferta, Tredicesima, Quattordicesima) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE tipologia_dipendente = VALUES(tipologia_dipendente), Livello_dipendente = VALUES(Livello_dipendente), Maggiorazione_notturna = VALUES(Maggiorazione_notturna), Maggiorazione_straordinaria = VALUES(Maggiorazione_straordinaria), Maggiorazione_festiva = VALUES(Maggiorazione_festiva), Maggiorazione_prefestiva = VALUES(Maggiorazione_prefestiva), Indennita_malattia = VALUES(Indennita_malattia), Indennita_reperibilita = VALUES(Indennita_reperibilita), Indennita_trasferta = VALUES(Indennita_trasferta), Tredicesima = VALUES(Tredicesima), Quattordicesima = VALUES(Quattordicesima)");
-  if ($stmt) {
-    $stmt->bind_param(
-      'issdddddddss',
-      $userId,
-      $dbTipologia,
-      $livelloValue,
-      $maggNotturna,
-      $maggStraordinari,
-      $maggFestivi,
-      $maggPrefestivi,
-      $indMalattia,
-      $indReperibilita,
-      $indTrasferta,
-      $tredicesimaValue,
-      $quattordicesimaValue
-    );
-    if ($stmt->execute()) {
-      $saveSuccess = true;
-    }
-    $stmt->close();
-  } else {
-    error_log('Impostazioni_contratto prepare error: ' . $mysqli->error);
+  $stmt = $pdo->prepare("INSERT INTO {$settingsTable} (ID_utente, tipologia_dipendente, Livello_dipendente, Maggiorazione_notturna, Maggiorazione_straordinaria, Maggiorazione_festiva, Maggiorazione_prefestiva, Indennita_malattia, Indennita_reperibilita, Indennita_trasferta, Tredicesima, Quattordicesima) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE tipologia_dipendente = VALUES(tipologia_dipendente), Livello_dipendente = VALUES(Livello_dipendente), Maggiorazione_notturna = VALUES(Maggiorazione_notturna), Maggiorazione_straordinaria = VALUES(Maggiorazione_straordinaria), Maggiorazione_festiva = VALUES(Maggiorazione_festiva), Maggiorazione_prefestiva = VALUES(Maggiorazione_prefestiva), Indennita_malattia = VALUES(Indennita_malattia), Indennita_reperibilita = VALUES(Indennita_reperibilita), Indennita_trasferta = VALUES(Indennita_trasferta), Tredicesima = VALUES(Tredicesima), Quattordicesima = VALUES(Quattordicesima)");
+  if ($stmt->execute([
+    $userId,
+    $dbTipologia,
+    $livelloValue,
+    $maggNotturna,
+    $maggStraordinari,
+    $maggFestivi,
+    $maggPrefestivi,
+    $indMalattia,
+    $indReperibilita,
+    $indTrasferta,
+    $tredicesimaValue,
+    $quattordicesimaValue,
+  ])) {
+    $saveSuccess = true;
   }
 }
 

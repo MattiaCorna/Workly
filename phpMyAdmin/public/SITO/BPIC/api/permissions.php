@@ -33,23 +33,14 @@ if (!$payload || empty($payload['user_id'])) {
 
 $userId = (int)$payload['user_id'];
 
-$stmt = $mysqli->prepare('
+$stmt = $pdo->prepare('
     SELECT Email
     FROM Utenti
     WHERE ID_utente = ?
     LIMIT 1
 ');
-if (!$stmt) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Errore interno (prepare).'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-$stmt->bind_param('i', $userId);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result ? $result->fetch_assoc() : null;
-$stmt->close();
+$stmt->execute([$userId]);
+$user = $stmt->fetch();
 
 if (!$user) {
     http_response_code(404);
@@ -59,7 +50,7 @@ if (!$user) {
 
 $email = $user['Email'];
 
-$stmt = $mysqli->prepare('
+$stmt = $pdo->prepare('
     SELECT r.ID_ruolo, r.Nome_ruolo,
            p.ID_privilegio, p.Nome_privilegio, p.Risorsa, p.Azione
     FROM Utente_Ruolo ur
@@ -68,22 +59,15 @@ $stmt = $mysqli->prepare('
     JOIN Privilegi p ON p.ID_privilegio = rp.ID_privilegio
     WHERE ur.email_utente = ?
 ');
-if (!$stmt) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Errore interno (prepare).'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-$stmt->bind_param('s', $email);
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt->execute([$email]);
+$result = $stmt->fetchAll();
 
 $roles = [];
 $permissions = [];
 $roleMap = [];
 $permMap = [];
 
-while ($row = $result->fetch_assoc()) {
+foreach ($result as $row) {
     $roleId = (int)$row['ID_ruolo'];
     if (!isset($roleMap[$roleId])) {
         $roleMap[$roleId] = true;
@@ -104,8 +88,6 @@ while ($row = $result->fetch_assoc()) {
         ];
     }
 }
-
-$stmt->close();
 
 http_response_code(200);
 echo json_encode([
