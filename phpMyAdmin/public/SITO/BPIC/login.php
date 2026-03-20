@@ -217,13 +217,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <?php endif; ?>
 
   <h2 style="text-align:center;">Hai un token?</h2>
-  <form method="post" action="validate_token.php" style="max-width:500px;margin:0 auto;">
+  <form method="post" action="/SITO/BPIC/validate_token.php" style="max-width:500px;margin:0 auto;">
     <label>Inserisci qui il token (JWT)</label>
     <textarea name="token" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:5px;"></textarea>
     <button type="submit">Valida token e accedi</button>
   </form>
 
-  <a href="register.php">Crea un account</a>
+  <a href="/SITO/BPIC/register.php">Crea un account</a>
 </div>
 
 <script>

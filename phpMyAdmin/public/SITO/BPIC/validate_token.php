@@ -6,21 +6,21 @@ require_once __DIR__ . "/api/jwt.php";
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: login.php');
+    header('Location: /SITO/BPIC/login.php');
     exit;
 }
 
 $token = trim($_POST['token'] ?? '');
 if ($token === '') {
     $error = 'Token mancante.';
-    echo "<p>$error</p><p><a href=\"login.php\">Torna al login</a></p>";
+    echo "<p>$error</p><p><a href=\"/SITO/BPIC/login.php\">Torna al login</a></p>";
     exit;
 }
 
 $payload = verify_jwt($token, JWT_SECRET);
 if (!$payload || empty($payload['user_id'])) {
     $error = 'Token non valido o scaduto.';
-    echo "<p>$error</p><p><a href=\"login.php\">Torna al login</a></p>";
+    echo "<p>$error</p><p><a href=\"/SITO/BPIC/login.php\">Torna al login</a></p>";
     exit;
 }
 
@@ -28,13 +28,13 @@ $userId = (int)$payload['user_id'];
 
 $stmt = $mysqli->prepare('SELECT ID_utente, Email FROM Utenti WHERE ID_utente = ? LIMIT 1');
 if (!$stmt) {
-    echo "<p>Errore interno (prepare).</p><p><a href=\"login.php\">Torna al login</a></p>";
+    echo "<p>Errore interno (prepare).</p><p><a href=\"/SITO/BPIC/login.php\">Torna al login</a></p>";
     exit;
 }
 
 $stmt->bind_param('i', $userId);
 if (!$stmt->execute()) {
-    echo "<p>Errore interno (execute).</p><p><a href=\"login.php\">Torna al login</a></p>";
+    echo "<p>Errore interno (execute).</p><p><a href=\"/SITO/BPIC/login.php\">Torna al login</a></p>";
     $stmt->close();
     exit;
 }
@@ -44,7 +44,7 @@ $user = $res ? $res->fetch_assoc() : null;
 $stmt->close();
 
 if (!$user) {
-    echo "<p>Utente non trovato.</p><p><a href=\"login.php\">Torna al login</a></p>";
+    echo "<p>Utente non trovato.</p><p><a href=\"/SITO/BPIC/login.php\">Torna al login</a></p>";
     exit;
 }
 
@@ -93,5 +93,5 @@ if ($stmt) {
 }
 
 // Reindirizza al profilo contratto
-header('Location: Profilo_contratto.php');
+header('Location: /SITO/BPIC/Profilo_contratto.php');
 exit;

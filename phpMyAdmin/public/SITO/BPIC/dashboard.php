@@ -1,15 +1,12 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
+$isAuthenticated = isset($_SESSION['user_id']);
 
 // Recupera ruoli e privilegi dalla sessione se presenti, altrimenti dal DB
-$roles = $_SESSION['roles'] ?? null;
-$permissions = $_SESSION['permissions'] ?? null;
+$roles = $isAuthenticated ? ($_SESSION['roles'] ?? null) : [];
+$permissions = $isAuthenticated ? ($_SESSION['permissions'] ?? null) : [];
 
-if (!$roles || !$permissions) {
+if ($isAuthenticated && (!$roles || !$permissions) && isset($_SESSION['email'])) {
     require_once __DIR__ . "/database.php";
     $email = $_SESSION['email'];
     $stmt = $mysqli->prepare('SELECT r.ID_ruolo, r.Nome_ruolo, p.ID_privilegio, p.Nome_privilegio, p.Risorsa, p.Azione
@@ -280,8 +277,8 @@ $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
             <a href="#prezzi">Prezzi</a>
         </div>
         <div class="nav-actions">
-            <a class="btn btn-outline" href="login.php">Accedi</a>
-            <a class="btn btn-primary" href="register.php">Registrati</a>
+            <a class="btn btn-outline" href="/SITO/BPIC/login.php">Accedi</a>
+            <a class="btn btn-primary" href="/SITO/BPIC/register.php">Registrati</a>
         </div>
     </nav>
 
@@ -290,8 +287,8 @@ $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
         <h1 class="hero-title">La tua busta paga,<br><span>semplificata</span></h1>
         <p class="hero-subtitle">Calcola stipendio lordo, netto, tasse e contributi in modo preciso. Gestisci straordinari, ferie, malattie e tutte le voci variabili della tua retribuzione.</p>
         <div class="hero-actions">
-            <a class="btn btn-primary" href="register.php">Inizia Gratis →</a>
-            <a class="btn btn-outline" href="login.php">Accedi</a>
+            <a class="btn btn-primary" href="/SITO/BPIC/register.php">Inizia Gratis →</a>
+            <a class="btn btn-outline" href="/SITO/BPIC/login.php">Accedi</a>
         </div>
     </section>
 
@@ -318,7 +315,7 @@ $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
         <h2>Prezzi chiari e trasparenti</h2>
         <p class="hero-subtitle">Scegli il piano giusto per la tua azienda o per il tuo team HR.</p>
         <div class="hero-actions">
-            <a class="btn btn-primary" href="register.php">Prova gratuita</a>
+            <a class="btn btn-primary" href="/SITO/BPIC/register.php">Prova gratuita</a>
         </div>
     </section>
 

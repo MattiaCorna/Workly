@@ -5,7 +5,7 @@ require_once __DIR__ . '/database.php';
 session_start();
 
 if (empty($_SESSION['user_id'])) {
-  header('Location: login.php');
+  header('Location: /SITO/BPIC/login.php');
   exit;
 }
 
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 
-  $redirect = 'Impostazioni_contratto.php';
+  $redirect = '/SITO/BPIC/Impostazioni_contratto.php';
   if ($contratto !== '') {
     $redirect .= '?contratto=' . urlencode($contratto);
   }
@@ -228,7 +228,7 @@ if ($selectedContratto === '') {
     <div class="title">Profilo contratto</div>
     <div class="subtitle">Seleziona la tipologia di contratto per impostare il profilo corretto.</div>
 
-    <form method="post" action="Profilo_contratto.php">
+    <form method="post" action="/SITO/BPIC/Profilo_contratto.php">
       <section class="card" data-option>
         <div class="card-left">
           <div class="badge">🏛️</div>

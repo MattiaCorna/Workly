@@ -209,7 +209,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <button type="submit">Registrati</button>
   </form>
 
-  <a href="login.php">Vai al login</a>
+  <a href="/SITO/BPIC/login.php">Vai al login</a>
 </div>
 
 </body>

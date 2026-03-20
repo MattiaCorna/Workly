@@ -5,7 +5,7 @@ require_once __DIR__ . '/database.php';
 session_start();
 
 if (empty($_SESSION['user_id'])) {
-  header('Location: login.php');
+  header('Location: /SITO/BPIC/login.php');
   exit;
 }
 
@@ -213,6 +213,7 @@ if ($contratto === 'metalmeccanico') {
       align-items: center;
       justify-content: space-between;
       margin-bottom: 24px;
+      gap: 12px;
     }
     .brand {
       display: flex;
@@ -238,6 +239,22 @@ if ($contratto === 'metalmeccanico') {
       color: var(--primary);
       font-weight: 600;
       background: rgba(102, 126, 234, 0.12);
+      padding: 8px 14px;
+      border-radius: 999px;
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .mockup-link {
+      text-decoration: none;
+      color: #0b8f77;
+      font-weight: 700;
+      background: #d6f4ec;
+      border: 1px solid #9dd7cb;
       padding: 8px 14px;
       border-radius: 999px;
     }
@@ -402,6 +419,16 @@ if ($contratto === 'metalmeccanico') {
     .save-btn:active {
       transform: translateY(1px);
     }
+    @media (max-width: 700px) {
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .topbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
   </style>
 </head>
 <body>
@@ -411,7 +438,10 @@ if ($contratto === 'metalmeccanico') {
         <span class="brand-badge">BP</span>
         Impostazioni contratto
       </div>
-      <a class="ghost-link" href="Profilo_contratto.php">Torna al profilo</a>
+      <div class="topbar-actions">
+        <a class="mockup-link" href="/SITO/BPIC/mockup_viste.php">Apri mockup</a>
+        <a class="ghost-link" href="/SITO/BPIC/Profilo_contratto.php">Torna al profilo</a>
+      </div>
     </div>
 
     <section class="hero">
@@ -423,7 +453,7 @@ if ($contratto === 'metalmeccanico') {
       <div class="notice success">Impostazioni salvate correttamente.</div>
     <?php endif; ?>
 
-    <form method="post" action="Impostazioni_contratto.php">
+    <form method="post" action="/SITO/BPIC/Impostazioni_contratto.php">
       <input type="hidden" name="contratto" value="<?php echo htmlspecialchars($contratto, ENT_QUOTES, 'UTF-8'); ?>">
 
       <section class="card">
