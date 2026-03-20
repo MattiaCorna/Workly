@@ -79,6 +79,21 @@ foreach ($result as $row) {
 $_SESSION['roles'] = $roles;
 $_SESSION['permissions'] = $permissions;
 
-// Reindirizza al profilo contratto
+// Se l'utente ha gia impostato il contratto, evita il setup e porta alla home provvisoria.
+$hasContractSettings = false;
+try {
+    $stmt = $pdo->prepare('SELECT ID_utente FROM Impostazioni_contratto WHERE ID_utente = ? AND tipologia_dipendente <> "" LIMIT 1');
+    $stmt->execute([$userId]);
+    $hasContractSettings = (bool)$stmt->fetch();
+} catch (Throwable $e) {
+    $hasContractSettings = false;
+}
+
+if ($hasContractSettings) {
+    header('Location: /SITO/BPIC/home.php');
+    exit;
+}
+
+// Al primo accesso l'utente compila il profilo contratto.
 header('Location: /SITO/BPIC/Profilo_contratto.php');
 exit;

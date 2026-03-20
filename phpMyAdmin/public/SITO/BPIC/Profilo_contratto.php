@@ -9,6 +9,19 @@ if (empty($_SESSION['user_id'])) {
   exit;
 }
 
+$userId = (int)$_SESSION['user_id'];
+
+try {
+  $stmt = $pdo->prepare('SELECT ID_utente FROM Impostazioni_contratto WHERE ID_utente = ? AND tipologia_dipendente <> "" LIMIT 1');
+  $stmt->execute([$userId]);
+  if ($stmt->fetch()) {
+    header('Location: /SITO/BPIC/home.php');
+    exit;
+  }
+} catch (Throwable $e) {
+  // Se la tabella non esiste ancora o c'e un errore, continua con il flusso standard.
+}
+
 function normalize_contratto(string $value): string
 {
   $value = strtolower(trim($value));
@@ -45,7 +58,6 @@ function db_to_contratto(string $value): string
 }
 
 $selectedContratto = '';
-$userId = (int)$_SESSION['user_id'];
 
 try {
   $stmt = $pdo->prepare('SELECT tipologia_dipendente FROM Profilo_contratto WHERE ID_utente = ? LIMIT 1');
