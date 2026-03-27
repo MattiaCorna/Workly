@@ -312,6 +312,53 @@ function badgeClass(string $group): string
 }
 
 $rolesLabel = empty($roleNames) ? 'nessun ruolo' : implode(', ', $roleNames);
+
+/* =====================================================================
+ * DATI TABELLA RIEPILOGO PERMESSI PER ROTTA
+ * Struttura: [metodo, path, descrizione, ospite, registrato, abbonato, admin, accesso, privilegio]
+ * Valori accesso: 'pubblica' | 'sessione' | 'JWT'
+ * ===================================================================== */
+$routePermissions = [
+    // --- Auth ---
+    [
+        'group'       => 'Auth',
+        'group_bg'    => '#fff7ed',
+        'group_bdr'   => '#fdba74',
+        'group_dot'   => '#c06a2a',
+        'routes'      => [
+            ['GET|POST', 'login.php',           'Login + generazione JWT',       true,  true,  true,  true,  'pubblica', '—'],
+            ['GET|POST', 'register.php',         'Registrazione nuovo utente',    true,  true,  true,  true,  'pubblica', '—'],
+            ['GET',      'logout.php',           'Logout → redirect login',       false, true,  true,  true,  'sessione', '—'],
+            ['POST',     'validate_token.php',   'Valida JWT da form → sessione', true,  true,  true,  true,  'pubblica', '—'],
+        ],
+    ],
+    // --- App protetta ---
+    [
+        'group'       => 'App protetta',
+        'group_bg'    => '#fef2f2',
+        'group_bdr'   => '#fca5a5',
+        'group_dot'   => '#d04040',
+        'routes'      => [
+            ['GET|POST', 'dashboard.php',                 'Dashboard principale',         false, true,  true,  true,  'sessione', 'login'],
+            ['GET|POST', 'Impostazioni_contratto.php',    'Imposta contratto utente',     false, true,  true,  true,  'sessione', 'buste_paga · INSERT'],
+            ['GET|POST', 'Profilo_contratto.php',         'Profilo contratto utente',     false, true,  true,  true,  'sessione', 'login'],
+            ['GET',      'mockup_viste.php',              'Mockup viste DB (questa pag)', false, true,  true,  true,  'sessione', 'login'],
+        ],
+    ],
+    // --- REST API JWT ---
+    [
+        'group'       => 'REST API JWT',
+        'group_bg'    => '#f0fdf4',
+        'group_bdr'   => '#86efac',
+        'group_dot'   => '#0b8f77',
+        'routes'      => [
+            ['POST',     'api/token.php',           'Ottieni JWT (email+password)',   true,  true,  true,  true,  'pubblica', '—'],
+            ['POST',     'api/verify_token.php',    'Verifica JWT → ruoli/permessi',  false, true,  true,  true,  'JWT',      'Bearer JWT valido'],
+            ['GET|POST', 'api/permissions.php',     'Permessi utente autenticato',    false, true,  true,  true,  'JWT',      'Bearer JWT valido'],
+            ['GET',      'api/generate_token.php',  'Genera JWT da sessione attiva',  false, true,  true,  true,  'sessione', 'sessione attiva'],
+        ],
+    ],
+];
 ?>
 <!doctype html>
 <html lang="it">
@@ -337,9 +384,7 @@ $rolesLabel = empty($roleNames) ? 'nessun ruolo' : implode(', ', $roleNames);
             --shadow: 0 10px 40px rgba(61, 50, 28, 0.12);
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -358,6 +403,7 @@ $rolesLabel = empty($roleNames) ? 'nessun ruolo' : implode(', ', $roleNames);
             padding: 28px 20px 72px;
         }
 
+        /* ── Hero ── */
         .hero {
             background: rgba(255, 249, 239, 0.8);
             border: 1px solid var(--line);
@@ -425,6 +471,15 @@ $rolesLabel = empty($roleNames) ? 'nessun ruolo' : implode(', ', $roleNames);
             line-height: 1.15;
         }
 
+        .top-link {
+            display: inline-block;
+            margin-top: 18px;
+            color: #0a6b5a;
+            text-decoration: none;
+            border-bottom: 1px solid currentColor;
+        }
+
+        /* ── Generic panel ── */
         .sections {
             margin-top: 22px;
             display: grid;
@@ -515,12 +570,11 @@ $rolesLabel = empty($roleNames) ? 'nessun ruolo' : implode(', ', $roleNames);
             font-size: 13px;
         }
 
-        th,
-        td {
+        th, td {
             padding: 10px;
             border-bottom: 1px solid #f0e7d7;
             text-align: left;
-            vertical-align: top;
+            vertical-align: middle;
         }
 
         th {
@@ -535,9 +589,7 @@ $rolesLabel = empty($roleNames) ? 'nessun ruolo' : implode(', ', $roleNames);
             font-family: 'IBM Plex Mono', monospace;
         }
 
-        tr:last-child td {
-            border-bottom: none;
-        }
+        tr:last-child td { border-bottom: none; }
 
         code {
             font-family: 'IBM Plex Mono', monospace;
@@ -558,268 +610,474 @@ $rolesLabel = empty($roleNames) ? 'nessun ruolo' : implode(', ', $roleNames);
             font-size: 13px;
         }
 
-        .top-link {
+        /* ── Riepilogo permessi – stili specifici ── */
+        .perm-section {
+            margin-top: 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .perm-section-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: var(--ink);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .perm-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .perm-table-wrap {
+            overflow-x: auto;
+            background: #fffcf7;
+        }
+
+        .perm-table {
+            min-width: 820px;
+            border-collapse: collapse;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        .perm-table th {
+            background: #f6efe3;
+            color: #5c513f;
+            padding: 8px 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--line);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .perm-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #f0e8d8;
+            vertical-align: middle;
+        }
+
+        .perm-table tr:last-child td { border-bottom: none; }
+        .perm-table tr:hover td { background: #fdf6e8; }
+
+        .perm-table .col-role { text-align: center; width: 80px; }
+
+        /* Method pills */
+        .m-pill {
             display: inline-block;
-            margin-top: 18px;
-            color: #0a6b5a;
-            text-decoration: none;
-            border-bottom: 1px solid currentColor;
+            border-radius: 999px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            white-space: nowrap;
+            letter-spacing: 0.03em;
+        }
+        .m-get    { background: #dcfce7; color: #166534; border: 1px solid #9fdfb8; }
+        .m-post   { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+        .m-both   { background: #ede9fe; color: #4c1d95; border: 1px solid #c4b5fd; }
+
+        /* Access badges */
+        .a-badge {
+            display: inline-block;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 9px;
+            white-space: nowrap;
+        }
+        .a-pub  { background: #dcfce7; color: #166534; border: 1px solid #9fdfb8; }
+        .a-sess { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+        .a-jwt  { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+
+        /* Route code */
+        code.route {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            color: #3b5bdb;
+            background: #eef2ff;
+            padding: 2px 7px;
+            border-radius: 6px;
+            white-space: nowrap;
         }
 
+        /* Privilege cell */
+        .priv-cell {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: #5c513f;
+            background: #f7f0e5;
+            padding: 2px 7px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+        .priv-none { color: #9ca3af; font-style: italic; }
+
+        /* Check/cross icons */
+        .ico-ok   { color: #16a34a; font-size: 15px; font-weight: 700; }
+        .ico-no   { color: #dc2626; font-size: 15px; font-weight: 700; }
+
+        /* Legend */
+        .perm-legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 10px 4px 2px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .perm-legend-item { display: flex; align-items: center; gap: 5px; }
+
+        /* Animations */
         @keyframes reveal {
-            from {
-                transform: translateY(10px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+            from { transform: translateY(10px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
         }
-
         @keyframes slideUp {
-            from {
-                transform: translateY(14px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+            from { transform: translateY(14px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
         }
 
         @media (max-width: 700px) {
-            .wrap {
-                padding: 16px 12px 42px;
-            }
-
-            .hero {
-                padding: 18px;
-                border-radius: 18px;
-            }
-
-            .panel {
-                padding: 12px;
-            }
+            .wrap  { padding: 16px 12px 42px; }
+            .hero  { padding: 18px; border-radius: 18px; }
+            .panel { padding: 12px; }
         }
     </style>
 </head>
 <body>
-    <main class="wrap">
-        <section class="hero">
-            <h1>Mockup applicazione BPIC</h1>
-            <p class="subtitle">
-                Layout costruito leggendo i risultati reali delle viste nel database.
-                Ogni blocco rappresenta una funzione del sistema con record attuali e anteprima dei dati (max 5 righe).
-            </p>
-            <p class="session-note">
-                Visibilita calcolata in base ai tuoi ruoli: <strong><?= htmlspecialchars($rolesLabel); ?></strong>
-            </p>
+<main class="wrap">
 
-            <div class="kpi-grid">
-                <article class="kpi">
-                    <label>Viste monitorate</label>
-                    <strong><?= count($results); ?></strong>
-                </article>
-                <article class="kpi">
-                    <label>Viste con dati</label>
-                    <strong><?= $nonEmptyViews; ?></strong>
-                </article>
-                <article class="kpi">
-                    <label>Righe totali</label>
-                    <strong><?= $totalRows; ?></strong>
-                </article>
-                <article class="kpi">
-                    <label>Data mockup</label>
-                    <strong><?= date('d/m/Y'); ?></strong>
-                </article>
+    <!-- =========================================================
+         HERO
+         ========================================================= -->
+    <section class="hero">
+        <h1>Mockup applicazione BPIC</h1>
+        <p class="subtitle">
+            Layout costruito leggendo i risultati reali delle viste nel database.
+            Ogni blocco rappresenta una funzione del sistema con record attuali e anteprima dei dati (max 5 righe).
+        </p>
+        <p class="session-note">
+            Visibilità calcolata in base ai tuoi ruoli: <strong><?= htmlspecialchars($rolesLabel); ?></strong>
+        </p>
+
+        <div class="kpi-grid">
+            <article class="kpi">
+                <label>Viste monitorate</label>
+                <strong><?= count($results); ?></strong>
+            </article>
+            <article class="kpi">
+                <label>Viste con dati</label>
+                <strong><?= $nonEmptyViews; ?></strong>
+            </article>
+            <article class="kpi">
+                <label>Righe totali</label>
+                <strong><?= $totalRows; ?></strong>
+            </article>
+            <article class="kpi">
+                <label>Data mockup</label>
+                <strong><?= date('d/m/Y'); ?></strong>
+            </article>
+        </div>
+
+        <a class="top-link" href="/SITO/BPIC/dashboard.php">Torna alla dashboard</a>
+    </section>
+
+    <!-- =========================================================
+         RIEPILOGO PERMESSI PER ROTTA
+         ========================================================= -->
+    <section class="sections" aria-label="Riepilogo permessi per rotta" style="margin-top:22px;">
+        <article class="panel" style="animation-delay:0ms;">
+            <header class="panel-head">
+                <div>
+                    <h2 class="panel-title">Riepilogo permessi per rotta</h2>
+                    <div class="panel-meta"><code>ruoli: ospite · registrato · abbonato · admin</code></div>
+                </div>
+                <span class="badge badge-count">tutte le rotte</span>
+            </header>
+
+            <?php foreach ($routePermissions as $rg): ?>
+                <div class="perm-section">
+                    <div class="perm-section-head" style="background:<?= $rg['group_bg']; ?>; border-bottom-color:<?= $rg['group_bdr']; ?>;">
+                        <span class="perm-dot" style="background:<?= $rg['group_dot']; ?>;"></span>
+                        <?= htmlspecialchars($rg['group']); ?>
+                        &nbsp;—&nbsp;/SITO/BPIC/
+                        <?php if ($rg['group'] === 'App protetta'): ?>
+                            <span style="font-weight:400;opacity:.65;">(sessione PHP richiesta)</span>
+                        <?php elseif ($rg['group'] === 'REST API JWT'): ?>
+                            <span style="font-weight:400;opacity:.65;">(Bearer JWT richiesto)</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="perm-table-wrap">
+                        <table class="perm-table">
+                            <thead>
+                                <tr>
+                                    <th>Rotta</th>
+                                    <th>Metodo</th>
+                                    <th class="col-role">Ospite</th>
+                                    <th class="col-role">Registrato</th>
+                                    <th class="col-role">Abbonato</th>
+                                    <th class="col-role">Admin</th>
+                                    <th>Accesso</th>
+                                    <th>Privilegio richiesto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($rg['routes'] as $r):
+                                    [$method, $path, $desc, $ospite, $registrato, $abbonato, $admin, $accesso, $privilegio] = $r;
+
+                                    $methodClass = match($method) {
+                                        'GET'      => 'm-get',
+                                        'POST'     => 'm-post',
+                                        default    => 'm-both',
+                                    };
+                                    $accessClass = match($accesso) {
+                                        'pubblica' => 'a-pub',
+                                        'JWT'      => 'a-jwt',
+                                        default    => 'a-sess',
+                                    };
+
+                                    $ico = static fn(bool $v): string => $v
+                                        ? '<span class="ico-ok">✓</span>'
+                                        : '<span class="ico-no">✗</span>';
+                                ?>
+                                <tr>
+                                    <td>
+                                        <code class="route"><?= htmlspecialchars($path); ?></code><br>
+                                        <span style="font-size:12px;color:var(--muted);"><?= htmlspecialchars($desc); ?></span>
+                                    </td>
+                                    <td><span class="m-pill <?= $methodClass; ?>"><?= htmlspecialchars($method); ?></span></td>
+                                    <td class="col-role"><?= $ico($ospite); ?></td>
+                                    <td class="col-role"><?= $ico($registrato); ?></td>
+                                    <td class="col-role"><?= $ico($abbonato); ?></td>
+                                    <td class="col-role"><?= $ico($admin); ?></td>
+                                    <td><span class="a-badge <?= $accessClass; ?>"><?= htmlspecialchars($accesso); ?></span></td>
+                                    <td>
+                                        <?php if ($privilegio === '—'): ?>
+                                            <span class="priv-none">—</span>
+                                        <?php else: ?>
+                                            <span class="priv-cell"><?= htmlspecialchars($privilegio); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <div class="perm-legend">
+                <span class="perm-legend-item"><span class="ico-ok" style="font-size:13px;">✓</span> Accesso consentito</span>
+                <span class="perm-legend-item"><span class="ico-no" style="font-size:13px;">✗</span> Accesso negato</span>
+                <span class="perm-legend-item"><span class="a-badge a-pub" style="font-size:11px;padding:2px 7px;">pubblica</span> Nessuna autenticazione</span>
+                <span class="perm-legend-item"><span class="a-badge a-sess" style="font-size:11px;padding:2px 7px;">sessione</span> Sessione PHP attiva</span>
+                <span class="perm-legend-item"><span class="a-badge a-jwt" style="font-size:11px;padding:2px 7px;">JWT</span> Bearer token valido</span>
             </div>
 
-            <a class="top-link" href="/SITO/BPIC/dashboard.php">Torna alla dashboard</a>
-        </section>
+        </article>
+    </section>
 
-        <!-- =========================================================
-             MAPPA ROTTE
-             ========================================================= -->
-        <section class="sections" aria-label="Mappa rotte">
-            <article class="panel" style="animation-delay:0ms;">
-                <header class="panel-head">
-                    <div>
-                        <h2 class="panel-title">Mappa rotte BPIC</h2>
-                        <div class="panel-meta"><code>solo sezioni BPIC</code></div>
-                    </div>
-                    <span class="badge badge-count">rotte BPIC</span>
-                </header>
+    <!-- =========================================================
+         MAPPA ROTTE (dettaglio gruppi)
+         ========================================================= -->
+    <section class="sections" aria-label="Mappa rotte">
+        <article class="panel" style="animation-delay:35ms;">
+            <header class="panel-head">
+                <div>
+                    <h2 class="panel-title">Mappa rotte BPIC</h2>
+                    <div class="panel-meta"><code>solo sezioni BPIC</code></div>
+                </div>
+                <span class="badge badge-count">rotte BPIC</span>
+            </header>
 
-                <?php
-                $routeGroups = [
-                    [
-                        'label' => 'Auth &nbsp;/SITO/BPIC/',
-                        'color' => '#fff7ed',
-                        'border' => '#fdba74',
-                        'routes' => [
-                            ['GET|POST', '/SITO/BPIC/login.php',          'Login + generazione JWT',          'pubblica'],
-                            ['GET|POST', '/SITO/BPIC/register.php',       'Registrazione nuovo utente',       'pubblica'],
-                            ['GET',      '/SITO/BPIC/logout.php',         'Logout → redirect login',          'sessione'],
-                            ['POST',     '/SITO/BPIC/validate_token.php', 'Valida JWT da form → sessione',    'pubblica'],
-                        ],
+            <?php
+            $routeGroups = [
+                [
+                    'label' => 'Auth &nbsp;/SITO/BPIC/',
+                    'color' => '#fff7ed',
+                    'border' => '#fdba74',
+                    'routes' => [
+                        ['GET|POST', '/SITO/BPIC/login.php',          'Login + generazione JWT',          'pubblica'],
+                        ['GET|POST', '/SITO/BPIC/register.php',       'Registrazione nuovo utente',       'pubblica'],
+                        ['GET',      '/SITO/BPIC/logout.php',         'Logout → redirect login',          'sessione'],
+                        ['POST',     '/SITO/BPIC/validate_token.php', 'Valida JWT da form → sessione',    'pubblica'],
                     ],
-                    [
-                        'label' => 'App protetta &nbsp;/SITO/BPIC/ (sessione PHP richiesta)',
-                        'color' => '#fef2f2',
-                        'border' => '#fca5a5',
-                        'routes' => [
-                            ['GET|POST', '/SITO/BPIC/dashboard.php',               'Dashboard principale',         'sessione'],
-                            ['GET|POST', '/SITO/BPIC/Impostazioni_contratto.php',  'Imposta contratto utente',     'sessione'],
-                            ['GET|POST', '/SITO/BPIC/Profilo_contratto.php',       'Profilo contratto utente',     'sessione'],
-                            ['GET',      '/SITO/BPIC/mockup_viste.php',            'Mockup viste DB (questa pag)', 'sessione'],
-                        ],
+                ],
+                [
+                    'label' => 'App protetta &nbsp;/SITO/BPIC/ (sessione PHP richiesta)',
+                    'color' => '#fef2f2',
+                    'border' => '#fca5a5',
+                    'routes' => [
+                        ['GET|POST', '/SITO/BPIC/dashboard.php',               'Dashboard principale',         'sessione'],
+                        ['GET|POST', '/SITO/BPIC/Impostazioni_contratto.php',  'Imposta contratto utente',     'sessione'],
+                        ['GET|POST', '/SITO/BPIC/Profilo_contratto.php',       'Profilo contratto utente',     'sessione'],
+                        ['GET',      '/SITO/BPIC/mockup_viste.php',            'Mockup viste DB (questa pag)', 'sessione'],
                     ],
-                    [
-                        'label' => 'REST API JWT &nbsp;/SITO/BPIC/api/ (Bearer JWT richiesto)',
-                        'color' => '#f0fdf4',
-                        'border' => '#86efac',
-                        'routes' => [
-                            ['POST',     '/SITO/BPIC/api/token.php',          'Ottieni JWT (email+password)',    'pubblica'],
-                            ['POST',     '/SITO/BPIC/api/verify_token.php',   'Verifica JWT → ruoli/permessi',   'JWT'],
-                            ['GET|POST', '/SITO/BPIC/api/permissions.php',    'Permessi utente autenticato',     'JWT'],
-                            ['GET',      '/SITO/BPIC/api/generate_token.php', 'Genera JWT da sessione attiva',   'sessione'],
-                        ],
+                ],
+                [
+                    'label' => 'REST API JWT &nbsp;/SITO/BPIC/api/ (Bearer JWT richiesto)',
+                    'color' => '#f0fdf4',
+                    'border' => '#86efac',
+                    'routes' => [
+                        ['POST',     '/SITO/BPIC/api/token.php',          'Ottieni JWT (email+password)',    'pubblica'],
+                        ['POST',     '/SITO/BPIC/api/verify_token.php',   'Verifica JWT → ruoli/permessi',   'JWT'],
+                        ['GET|POST', '/SITO/BPIC/api/permissions.php',    'Permessi utente autenticato',     'JWT'],
+                        ['GET',      '/SITO/BPIC/api/generate_token.php', 'Genera JWT da sessione attiva',   'sessione'],
                     ],
-                ];
+                ],
+            ];
 
-                $methodColor = [
-                    'GET'    => ['bg' => '#dcfce7', 'col' => '#166534'],
-                    'POST'   => ['bg' => '#dbeafe', 'col' => '#1e40af'],
-                    'PUT'    => ['bg' => '#fef9c3', 'col' => '#854d0e'],
-                    'DELETE' => ['bg' => '#fee2e2', 'col' => '#991b1b'],
-                    'GET|POST' => ['bg' => '#ede9fe', 'col' => '#4c1d95'],
-                ];
-                $accessColor = [
-                    'pubblica'    => ['bg' => '#dcfce7', 'col' => '#166534'],
-                    'sessione'    => ['bg' => '#fef9c3', 'col' => '#854d0e'],
-                    'JWT'         => ['bg' => '#dbeafe', 'col' => '#1e40af'],
-                    'non_abbonato+' => ['bg' => '#f3e8ff', 'col' => '#6b21a8'],
-                    'abbonato+'   => ['bg' => '#ffedd5', 'col' => '#9a3412'],
-                    'admin'       => ['bg' => '#fee2e2', 'col' => '#991b1b'],
-                    'nessuna auth' => ['bg' => '#f1f5f9', 'col' => '#475569'],
-                ];
+            $methodColor = [
+                'GET'      => ['bg' => '#dcfce7', 'col' => '#166534'],
+                'POST'     => ['bg' => '#dbeafe', 'col' => '#1e40af'],
+                'PUT'      => ['bg' => '#fef9c3', 'col' => '#854d0e'],
+                'DELETE'   => ['bg' => '#fee2e2', 'col' => '#991b1b'],
+                'GET|POST' => ['bg' => '#ede9fe', 'col' => '#4c1d95'],
+            ];
+            $accessColor = [
+                'pubblica'       => ['bg' => '#dcfce7', 'col' => '#166534'],
+                'sessione'       => ['bg' => '#fef9c3', 'col' => '#854d0e'],
+                'JWT'            => ['bg' => '#dbeafe', 'col' => '#1e40af'],
+                'non_abbonato+'  => ['bg' => '#f3e8ff', 'col' => '#6b21a8'],
+                'abbonato+'      => ['bg' => '#ffedd5', 'col' => '#9a3412'],
+                'admin'          => ['bg' => '#fee2e2', 'col' => '#991b1b'],
+                'nessuna auth'   => ['bg' => '#f1f5f9', 'col' => '#475569'],
+            ];
 
-                $filteredRouteGroups = [];
-                foreach ($routeGroups as $group) {
-                    $visibleRoutes = [];
-                    foreach ($group['routes'] as $route) {
-                        if (canSeeRouteByAccess((string)$route[3], $roleNames, $permissions)) {
-                            $visibleRoutes[] = $route;
-                        }
-                    }
-
-                    if (!empty($visibleRoutes)) {
-                        $group['routes'] = $visibleRoutes;
-                        $filteredRouteGroups[] = $group;
+            $filteredRouteGroups = [];
+            foreach ($routeGroups as $group) {
+                $visibleRoutes = [];
+                foreach ($group['routes'] as $route) {
+                    if (canSeeRouteByAccess((string)$route[3], $roleNames, $permissions)) {
+                        $visibleRoutes[] = $route;
                     }
                 }
-                ?>
+                if (!empty($visibleRoutes)) {
+                    $group['routes'] = $visibleRoutes;
+                    $filteredRouteGroups[] = $group;
+                }
+            }
+            ?>
 
-                <?php foreach ($filteredRouteGroups as $gi => $group): ?>
-                    <div style="margin-top:<?= $gi === 0 ? '16' : '14'; ?>px; border:1px solid <?= $group['border']; ?>; border-radius:12px; overflow:hidden;">
-                        <div style="background:<?= $group['color']; ?>; padding:8px 14px; font-size:13px; font-weight:700; font-family:'IBM Plex Mono',monospace; color:#1c1a15;">
-                            <?= $group['label']; ?>
-                        </div>
-                        <div style="overflow-x:auto; background:#fff;">
-                            <table style="min-width:640px;">
-                                <thead>
+            <?php foreach ($filteredRouteGroups as $gi => $group): ?>
+                <div style="margin-top:<?= $gi === 0 ? '16' : '14'; ?>px; border:1px solid <?= $group['border']; ?>; border-radius:12px; overflow:hidden;">
+                    <div style="background:<?= $group['color']; ?>; padding:8px 14px; font-size:13px; font-weight:700; font-family:'IBM Plex Mono',monospace; color:#1c1a15;">
+                        <?= $group['label']; ?>
+                    </div>
+                    <div style="overflow-x:auto; background:#fff;">
+                        <table style="min-width:640px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:110px;">Metodo</th>
+                                    <th>Path / use_case</th>
+                                    <th>Descrizione</th>
+                                    <th style="width:130px;">Accesso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($group['routes'] as $r): ?>
+                                    <?php
+                                    $mc = $methodColor[$r[0]] ?? ['bg' => '#f1f5f9', 'col' => '#475569'];
+                                    $ac = $accessColor[$r[3]] ?? ['bg' => '#f1f5f9', 'col' => '#475569'];
+                                    ?>
                                     <tr>
-                                        <th style="width:110px;">Metodo</th>
-                                        <th>Path / use_case</th>
-                                        <th>Descrizione</th>
-                                        <th style="width:130px;">Accesso</th>
+                                        <td>
+                                            <span style="display:inline-block;background:<?= $mc['bg']; ?>;color:<?= $mc['col']; ?>;border-radius:6px;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;white-space:nowrap;">
+                                                <?= htmlspecialchars($r[0]); ?>
+                                            </span>
+                                        </td>
+                                        <td><code><?= htmlspecialchars($r[1]); ?></code></td>
+                                        <td style="color:#374151;font-size:13px;"><?= htmlspecialchars($r[2]); ?></td>
+                                        <td>
+                                            <span style="display:inline-block;background:<?= $ac['bg']; ?>;color:<?= $ac['col']; ?>;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">
+                                                <?= htmlspecialchars($r[3]); ?>
+                                            </span>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($group['routes'] as $r): ?>
-                                        <?php
-                                        $mc = $methodColor[$r[0]] ?? ['bg' => '#f1f5f9', 'col' => '#475569'];
-                                        $ac = $accessColor[$r[3]] ?? ['bg' => '#f1f5f9', 'col' => '#475569'];
-                                        ?>
-                                        <tr>
-                                            <td>
-                                                <span style="display:inline-block;background:<?= $mc['bg']; ?>;color:<?= $mc['col']; ?>;border-radius:6px;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;white-space:nowrap;">
-                                                    <?= htmlspecialchars($r[0]); ?>
-                                                </span>
-                                            </td>
-                                            <td><code><?= htmlspecialchars($r[1]); ?></code></td>
-                                            <td style="color:#374151;font-size:13px;"><?= htmlspecialchars($r[2]); ?></td>
-                                            <td>
-                                                <span style="display:inline-block;background:<?= $ac['bg']; ?>;color:<?= $ac['col']; ?>;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">
-                                                    <?= htmlspecialchars($r[3]); ?>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+        </article>
+    </section>
+
+    <!-- =========================================================
+         VISTE DATABASE
+         ========================================================= -->
+    <section class="sections" aria-label="Viste database">
+        <?php foreach ($results as $index => $result): ?>
+            <article class="panel" style="animation-delay: <?= ($index * 35); ?>ms;">
+                <header class="panel-head">
+                    <div>
+                        <h2 class="panel-title"><?= htmlspecialchars($result['title']); ?></h2>
+                        <div class="panel-meta">
+                            <code><?= htmlspecialchars($result['name']); ?></code>
                         </div>
                     </div>
-                <?php endforeach; ?>
+                    <div class="panel-meta">
+                        <span class="badge <?= badgeClass($result['group']); ?>"><?= htmlspecialchars($result['group']); ?></span>
+                        <span class="badge badge-count"><?= $result['count']; ?> record</span>
+                    </div>
+                </header>
 
-            </article>
-        </section>
-
-        <section class="sections" aria-label="Viste database">
-            <?php foreach ($results as $index => $result): ?>
-                <article class="panel" style="animation-delay: <?= ($index * 35); ?>ms;">
-                    <header class="panel-head">
-                        <div>
-                            <h2 class="panel-title"><?= htmlspecialchars($result['title']); ?></h2>
-                            <div class="panel-meta">
-                                <code><?= htmlspecialchars($result['name']); ?></code>
-                            </div>
-                        </div>
-                        <div class="panel-meta">
-                            <span class="badge <?= badgeClass($result['group']); ?>"><?= htmlspecialchars($result['group']); ?></span>
-                            <span class="badge badge-count"><?= $result['count']; ?> record</span>
-                        </div>
-                    </header>
-
-                    <?php if ($result['error'] !== null): ?>
-                        <div class="error">
-                            Errore query: <?= htmlspecialchars($result['error']); ?>
-                        </div>
-                    <?php elseif ($result['count'] === 0): ?>
-                        <div class="empty">
-                            Nessun dato disponibile in questa vista. Il mockup evidenzia uno stato vuoto che puo essere usato per CTA o onboarding.
-                        </div>
-                    <?php else: ?>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
+                <?php if ($result['error'] !== null): ?>
+                    <div class="error">
+                        Errore query: <?= htmlspecialchars($result['error']); ?>
+                    </div>
+                <?php elseif ($result['count'] === 0): ?>
+                    <div class="empty">
+                        Nessun dato disponibile in questa vista. Il mockup evidenzia uno stato vuoto che può essere usato per CTA o onboarding.
+                    </div>
+                <?php else: ?>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <?php foreach ($result['columns'] as $column): ?>
+                                        <th><?= htmlspecialchars($column); ?></th>
+                                    <?php endforeach; ?>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($result['rows'] as $row): ?>
                                     <tr>
                                         <?php foreach ($result['columns'] as $column): ?>
-                                            <th><?= htmlspecialchars($column); ?></th>
+                                            <td>
+                                                <?php
+                                                $value = $row[$column] ?? null;
+                                                echo $value === null || $value === '' ? '<em>NULL</em>' : htmlspecialchars((string)$value);
+                                                ?>
+                                            </td>
                                         <?php endforeach; ?>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($result['rows'] as $row): ?>
-                                        <tr>
-                                            <?php foreach ($result['columns'] as $column): ?>
-                                                <td>
-                                                    <?php
-                                                    $value = $row[$column] ?? null;
-                                                    echo $value === null || $value === '' ? '<em>NULL</em>' : htmlspecialchars((string) $value);
-                                                    ?>
-                                                </td>
-                                            <?php endforeach; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </article>
-            <?php endforeach; ?>
-        </section>
-    </main>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </article>
+        <?php endforeach; ?>
+    </section>
+
+</main>
 </body>
 </html>

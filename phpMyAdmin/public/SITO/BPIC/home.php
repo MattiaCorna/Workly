@@ -181,6 +181,7 @@ $isAbbonato = in_array(1, $roleIds, true) || in_array(2, $roleIds, true);
       <nav class="menu">
         <a href="/SITO/BPIC/home.php">Home</a>
         <a href="/SITO/BPIC/mockup_viste.php">Nuova busta paga</a>
+        <a href="/SITO/BPIC/mockup_viste.php">Mockup viste</a>
       </nav>
 
       <div class="menu-title">Area Abbonato</div>
