@@ -79,6 +79,14 @@ foreach ($result as $row) {
 $_SESSION['roles'] = $roles;
 $_SESSION['permissions'] = $permissions;
 
+$roleNames = array_map(static fn(array $r): string => (string)($r['name'] ?? ''), $roles);
+$isTenant = in_array('tenant', $roleNames, true);
+
+if ($isTenant) {
+    header('Location: /SITO/BPIC/tenant_dashboard.php');
+    exit;
+}
+
 // Se l'utente ha gia impostato il contratto, evita il setup e porta alla home provvisoria.
 $hasContractSettings = false;
 try {

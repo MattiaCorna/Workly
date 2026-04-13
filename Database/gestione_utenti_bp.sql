@@ -152,6 +152,41 @@ CREATE TABLE `Utente_Ruolo` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Assegna ruoli agli utenti';
 
+-- --------------------------------------------------------
+
+CREATE TABLE `Aziende_tenant` (
+  `ID_azienda`         int(11)        NOT NULL AUTO_INCREMENT,
+  `ID_tenant`          int(11)        NOT NULL,
+  `Ragione_sociale`    varchar(120)   NOT NULL,
+  `Settore`            varchar(80)    DEFAULT NULL,
+  `Email_commerciale`  varchar(120)   DEFAULT NULL,
+  `Stato_relazione`    enum('prospect','in_negoziazione','attiva','chiusa') NOT NULL DEFAULT 'prospect',
+  `Data_creazione`     timestamp      NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`ID_azienda`),
+  KEY `idx_aziende_tenant` (`ID_tenant`),
+  KEY `idx_aziende_stato` (`Stato_relazione`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Aziende gestite dai tenant';
+
+-- --------------------------------------------------------
+
+CREATE TABLE `Vendite_tenant` (
+  `ID_vendita`              int(11)        NOT NULL AUTO_INCREMENT,
+  `ID_tenant`               int(11)        NOT NULL,
+  `ID_azienda`              int(11)        NOT NULL,
+  `Nome_deal`               varchar(120)   NOT NULL,
+  `Valore_previsto`         decimal(12,2)  NOT NULL,
+  `Stato`                   enum('bozza','trattativa','vinta','persa') NOT NULL DEFAULT 'bozza',
+  `Data_chiusura_prevista`  date           DEFAULT NULL,
+  `Note`                    text           DEFAULT NULL,
+  `Data_creazione`          timestamp      NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`ID_vendita`),
+  KEY `idx_vendite_tenant` (`ID_tenant`),
+  KEY `idx_vendite_azienda` (`ID_azienda`),
+  KEY `idx_vendite_stato` (`Stato`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Pipeline vendite gestita dai tenant';
+
 -- ============================================================
 -- DATI
 -- ============================================================
@@ -167,7 +202,8 @@ INSERT INTO `Privilegi`
 (7,  'Confronto tra buste paga',      'Permette di confrontare buste paga',                 'confronto',  'SELECT'),
 (8,  'Gestione utenti',               'Gestione degli utenti del sistema',                  'utenti',     'ALL'),
 (9,  'Gestione ruoli',                'Gestione dei ruoli',                                 'ruoli',      'ALL'),
-(10, 'Gestione privilegi',            'Gestione dei privilegi',                             'privilegi',  'ALL');
+(10, 'Gestione privilegi',            'Gestione dei privilegi',                             'privilegi',  'ALL'),
+(11, 'Gestione vendite tenant',       'Gestione completa vendite e aziende del tenant',     'vendite_tenant', 'ALL');
 
 -- --------------------------------------------------------
 
@@ -175,13 +211,15 @@ INSERT INTO `Ruoli`
   (`ID_ruolo`, `Nome_ruolo`, `Descrizione`, `Attivo`) VALUES
 (1, 'admin',               'Amministratore del sistema con pieni privilegi', 1),
 (2, 'utente_abbonato',     'Utente con abbonamento attivo',                  1),
-(3, 'utente_non_abbonato', 'Utente senza abbonamento',                       1);
+(3, 'utente_non_abbonato', 'Utente senza abbonamento',                       1),
+(4, 'tenant',              'Gestisce aziende e pipeline vendite del sito',   1);
 
 -- --------------------------------------------------------
 
 -- admin (ruolo 1): tutti i privilegi
 -- utente_abbonato (ruolo 2): privilegi 1-7
 -- utente_non_abbonato (ruolo 3): privilegi 1-3
+-- tenant (ruolo 4): privilegi tenant (11)
 INSERT INTO `Ruolo_Privilegio`
   (`ID_ruolo`, `ID_privilegio`, `Data_assegnazione`) VALUES
 (1, 1,  '2026-01-27 17:33:21'),
@@ -203,7 +241,8 @@ INSERT INTO `Ruolo_Privilegio`
 (2, 7,  '2026-01-27 17:34:50'),
 (3, 1,  '2026-01-27 17:34:50'),
 (3, 2,  '2026-01-27 17:34:50'),
-(3, 3,  '2026-01-27 17:34:50');
+(3, 3,  '2026-01-27 17:34:50'),
+(4, 11, '2026-04-13 09:30:00');
 
 -- --------------------------------------------------------
 
@@ -267,6 +306,19 @@ ALTER TABLE `Ruolo_Privilegio`
 ALTER TABLE `Utente_Ruolo`
   ADD CONSTRAINT `Utente_Ruolo_ibfk_1`
     FOREIGN KEY (`ID_ruolo`) REFERENCES `Ruoli` (`ID_ruolo`)
+    ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `Aziende_tenant`
+  ADD CONSTRAINT `Aziende_tenant_ibfk_1`
+    FOREIGN KEY (`ID_tenant`) REFERENCES `Utenti` (`ID_utente`)
+    ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `Vendite_tenant`
+  ADD CONSTRAINT `Vendite_tenant_ibfk_1`
+    FOREIGN KEY (`ID_tenant`) REFERENCES `Utenti` (`ID_utente`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `Vendite_tenant_ibfk_2`
+    FOREIGN KEY (`ID_azienda`) REFERENCES `Aziende_tenant` (`ID_azienda`)
     ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- ============================================================
@@ -421,6 +473,27 @@ FROM `Privilegi` p
 LEFT JOIN `Ruolo_Privilegio` rp ON rp.`ID_privilegio` = p.`ID_privilegio`
 LEFT JOIN `Ruoli`             r  ON r.`ID_ruolo`       = rp.`ID_ruolo`
 ORDER BY p.`ID_privilegio`, r.`ID_ruolo`;
+
+--
+-- UC: Dashboard vendite tenant
+-- Ruoli: tenant, admin
+--
+CREATE OR REPLACE VIEW `v_tenant_dashboard_vendite` AS
+SELECT
+  vt.`ID_vendita`,
+  vt.`ID_tenant`,
+  u.`Email`             AS `Email_tenant`,
+  vt.`ID_azienda`,
+  a.`Ragione_sociale`,
+  a.`Settore`,
+  vt.`Nome_deal`,
+  vt.`Valore_previsto`,
+  vt.`Stato`,
+  vt.`Data_chiusura_prevista`,
+  vt.`Data_creazione`
+FROM `Vendite_tenant` vt
+JOIN `Utenti` u ON u.`ID_utente` = vt.`ID_tenant`
+JOIN `Aziende_tenant` a ON a.`ID_azienda` = vt.`ID_azienda`;
 
 -- ============================================================
 

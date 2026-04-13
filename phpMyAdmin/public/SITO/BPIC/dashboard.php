@@ -45,6 +45,12 @@ $roleNames = array_map(fn($r) => $r['name'], $roles ?? []);
 $isAdmin = in_array('admin', $roleNames, true);
 $isAbbonato = in_array('utente_abbonato', $roleNames, true);
 $isNonAbbonato = in_array('utente_non_abbonato', $roleNames, true);
+$isTenant = in_array('tenant', $roleNames, true);
+
+if ($isAuthenticated && $isTenant) {
+    header('Location: /SITO/BPIC/tenant_dashboard.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
